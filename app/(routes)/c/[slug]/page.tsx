@@ -23,14 +23,14 @@ export default function CharacterPage() {
   const slug = String(params?.slug || "");
   const character = findCharacter(slug);
 
+  if (!character) {
+    return <div className="text-white/70">Character not found.</div>;
+  }
+
   const handleEdit = (combo: Combo) => {
     // Navigate to home page (combo builder) with the combo data in URL state
     router.push(`/?edit=${combo.id}&returnTo=character&characterSlug=${character.slug}`);
   };
-
-  if (!character) {
-    return <div className="text-white/70">Character not found.</div>;
-  }
 
   return (
     <div className="space-y-6">
