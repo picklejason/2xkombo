@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 
 export function Footer() {
   return (
@@ -11,13 +12,17 @@ export function Footer() {
             2XKOMBO is not affiliated with, endorsed, sponsored, or specifically approved by Riot Games, Inc.
           </p>
 
-          {/* Attribution */}
-          <p className="leading-relaxed">
-            Made by{' '}
-            <span className="text-blue-400 font-medium">picklejason</span>.{' '}
-            If you have any feedback please reach out on Discord{' '}
-            <span className="text-blue-400 font-medium">@picklejason</span>.
-          </p>
+
+			{/* Attribution + Legal */}
+			<div className="leading-relaxed flex items-center justify-between gap-4">
+				<p className="">
+					Made by{' '}
+					<span className="text-blue-400 font-medium">picklejason</span>.{' '}
+					If you have any feedback please reach out on Discord{' '}
+					<span className="text-blue-400 font-medium">@picklejason</span>.
+				</p>
+				<Link href="/privacy" className="text-blue-400 font-medium" aria-label="Read our Privacy Policy">Privacy Policy</Link>
+			</div>
         </div>
       </div>
     </footer>
