@@ -36,11 +36,8 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
   const [meta, setMeta] = useState({ name: "", difficulty: "", tags: "", characterId: characterId || "" });
   const [toast, setToast] = useState<{message: string; visible: boolean}>({message: "", visible: false});
   const [importText, setImportText] = useState("");
+  const [cameFromCharacterPage, setCameFromCharacterPage] = useState<string | null>(null);
   const supabase = createBrowserClient();
-
-  // Check if we came from a character page
-  const cameFromCharacterPage = typeof window !== 'undefined' &&
-    new URLSearchParams(window.location.search).get('character');
 
   const handleBack = () => {
     if (cameFromCharacterPage) {
@@ -66,8 +63,12 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
         characterId: editingCombo.character_id || characterId || ""
       });
     } else {
-      // Load from URL parameters for sharing
+      // Load from URL parameters for sharing (client-side only)
       const urlParams = new URLSearchParams(window.location.search);
+      
+      // Also detect if we came from a character page
+      const characterParam = urlParams.get('character');
+      setCameFromCharacterPage(characterParam);
 
       // Check for new compressed format first
       const compressedData = urlParams.get('c');
@@ -239,7 +240,7 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
       if (editingCombo) {
         // Update existing combo
         const updateData = { ...comboData };
-        delete updateData.user_id; // Don't change ownership
+        delete (updateData as any).user_id; // Don't change ownership
 
         const { error } = await supabase
           .from("combos")
