@@ -24,7 +24,7 @@ export default function RootLayout({
           <header className="app-header">
             <nav className="app-nav" role="navigation" aria-label="Main navigation">
               <Link href="/" className="app-nav__brand" aria-label="2XKOmbo homepage">
-                <span className="neon-title text-xl font-bold tracking-wide">2XKOmbo</span>
+                <span className="neon-title text-2xl font-bold tracking-wide">2XKOmbo</span>
               </Link>
               <Navigation />
             </nav>

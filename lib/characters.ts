@@ -22,7 +22,7 @@ export const characters: Character[] = raw.map((c) => ({
   id: c.id,
   slug: c.slug,
   name: c.name,
-  portraitUrl: `/assets/${c.imagePrefix}_cs_external.png`,
+  portraitUrl: `/assets/600px-${c.name}_cs.png`,
 }));
 
 export function findCharacter(slug: string): Character | undefined {

@@ -1,5 +1,4 @@
 "use client";
-import Image from "next/image";
 
 export type InputKey =
   | "1"|"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9"
@@ -43,7 +42,6 @@ const keyToAsset: Record<string, string> = {
 export default function InputIcon({ k, size = 44, showBackground = true }: { k: InputKey; size?: number; showBackground?: boolean }) {
   const src = keyToAsset[k];
   const color = chipColor(k);
-  const isTransition = ["+", ">", "T"].includes(k);
 
   // Handle special cases
   if (k === "5") {

@@ -1,23 +1,30 @@
 "use client";
-import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import { characters, findCharacter } from "@/lib/characters";
-import ComboBuilder from "@/components/ComboBuilder";
+import { findCharacter } from "@/lib/characters";
 import MyCombos from "@/components/MyCombos";
+import { useRouter } from "next/navigation";
+import { InputKey } from "@/components/InputIcon";
+import CharacterImage from "@/components/CharacterImage";
 
-type TabKey = "my" | "builder";
-
-const tabs: { key: TabKey; label: string }[] = [
-  { key: "my", label: "My Combos" },
-  { key: "builder", label: "Combo Builder" },
-];
+type Combo = {
+  id: string;
+  name: string;
+  inputs: InputKey[];
+  difficulty: string;
+  tags: string[];
+  character_id: string;
+};
 
 export default function CharacterPage() {
   const params = useParams();
+  const router = useRouter();
   const slug = String(params?.slug || "");
   const character = findCharacter(slug);
-  const [active, setActive] = useState<TabKey>("builder");
-  const [editingCombo, setEditingCombo] = useState<any>(null);
+
+  const handleEdit = (combo: Combo) => {
+    // Navigate to home page (combo builder) with the combo data in URL state
+    router.push(`/?edit=${combo.id}`);
+  };
 
   if (!character) {
     return <div className="text-white/70">Character not found.</div>;
@@ -28,49 +35,35 @@ export default function CharacterPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-6">
           <div className="flex-shrink-0">
-            <img
+            <CharacterImage
+              name={character.name}
               src={character.portraitUrl}
-              alt={character.name}
-              className="h-24 w-24 md:h-32 md:w-32 object-cover border-4 border-brutal-border box-shadow-brutal"
+              variant="portrait"
+              size={128}
             />
           </div>
           <div>
-            <h1 className="neon-title text-2xl md:text-3xl font-black tracking-wider mb-1">{character.name.toUpperCase()}</h1>
+            <h1 className="neon-title text-2xl md:text-3xl font-black tracking-wider mb-1">
+              {character.name.toUpperCase()} COMBOS
+            </h1>
           </div>
         </div>
-
-        <div className="flex gap-3">
-          {tabs.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setActive(t.key)}
-              className={`brutal-btn ${active===t.key ? "brutal-btn--primary" : "brutal-btn--secondary"}`}
-              aria-selected={active===t.key}
-            >
-              {t.label.toUpperCase()}
-            </button>
-          ))}
+        <div>
+          <a
+            href={`/?character=${character.id}`}
+            className="brutal-btn brutal-btn--primary px-6 py-3"
+          >
+            CREATE COMBO
+          </a>
         </div>
       </div>
 
-      {active === "my" && (
-        <MyCombos
-          characterId={character.id}
-          onEdit={(combo) => {
-            setEditingCombo(combo);
-            setActive("builder");
-          }}
-        />
-      )}
-      {active === "builder" && (
-        <ComboBuilder
-          characterId={character.id}
-          editingCombo={editingCombo}
-          onSave={() => setEditingCombo(null)}
-        />
-      )}
+      <MyCombos characterId={character.id} onEdit={handleEdit} />
     </div>
   );
 }
+
+
+
 
 

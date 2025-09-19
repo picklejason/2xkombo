@@ -15,9 +15,18 @@ export function Navigation() {
     );
   }
 
-  if (user) {
-    return (
-      <div className="app-nav__actions">
+  return (
+    <div className="app-nav__actions">
+      {user && (
+        <Link
+          href="/my-combos"
+          className="brutal-btn brutal-btn--secondary"
+          aria-label="My Combos"
+        >
+          MY COMBOS
+        </Link>
+      )}
+      {user ? (
         <button
           onClick={signOut}
           className="brutal-btn brutal-btn--secondary"
@@ -25,26 +34,24 @@ export function Navigation() {
         >
           SIGN OUT
         </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="app-nav__actions">
-      <Link
-        href="/login"
-        className="brutal-btn brutal-btn--secondary"
-        aria-label="Log in to your account"
-      >
-        LOG IN
-      </Link>
-      <Link
-        href="/signup"
-        className="brutal-btn brutal-btn--primary"
-        aria-label="Create new account"
-      >
-        SIGN UP
-      </Link>
+      ) : (
+        <>
+          <Link
+            href="/login"
+            className="brutal-btn brutal-btn--secondary"
+            aria-label="Log in to your account"
+          >
+            LOG IN
+          </Link>
+          <Link
+            href="/signup"
+            className="brutal-btn brutal-btn--primary"
+            aria-label="Create new account"
+          >
+            SIGN UP
+          </Link>
+        </>
+      )}
     </div>
   );
 }

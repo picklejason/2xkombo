@@ -1,24 +1,36 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import InputIcon, { InputKey } from "./InputIcon";
 import { createBrowserClient } from "@/lib/supabaseClient";
+import { characters } from "@/lib/characters";
+import { useAuth } from "@/lib/AuthContext";
 
 const directionalInputs: InputKey[] = ["7","8","9","4","5","6","1","2","3"];
 const row1Inputs: InputKey[] = ["L","M","H","tag"];
 const row2Inputs: InputKey[] = ["S1","S2","D","air"];
 const row3Inputs: InputKey[] = ["+","T","~","or"];
 
+type Combo = {
+  id: string;
+  name: string;
+  inputs: InputKey[];
+  difficulty: string;
+  tags: string[];
+  character_id: string;
+};
+
 type Props = {
-  characterId: string;
-  editingCombo?: any;
+  characterId?: string;
+  editingCombo?: Combo | null;
   onSave?: () => void;
 };
 
 export default function ComboBuilder({ characterId, editingCombo, onSave }: Props) {
+  const { user } = useAuth();
   const [inputs, setInputs] = useState<InputKey[]>([]);
   const [notation, setNotation] = useState<"icons"|"numpad">("icons");
   const [saving, setSaving] = useState(false);
-  const [meta, setMeta] = useState({ name: "", difficulty: "Easy", tags: "" });
+  const [meta, setMeta] = useState({ name: "", difficulty: "", tags: "", characterId: characterId || "" });
   const [toast, setToast] = useState<{message: string; visible: boolean}>({message: "", visible: false});
   const [importText, setImportText] = useState("");
   const supabase = createBrowserClient();
@@ -29,11 +41,12 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
       setInputs(editingCombo.inputs || []);
       setMeta({
         name: editingCombo.name || "",
-        difficulty: editingCombo.difficulty || "Easy",
-        tags: (editingCombo.tags || []).join(", ")
+        difficulty: editingCombo.difficulty || "",
+        tags: (editingCombo.tags || []).join(", "),
+        characterId: editingCombo.character_id || characterId || ""
       });
     }
-  }, [editingCombo]);
+  }, [editingCombo, characterId]);
 
   function add(k: InputKey) { setInputs((a)=>[...a,k]); }
   function undo() { setInputs((a)=>a.slice(0,-1)); }
@@ -56,7 +69,7 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
       setInputs(parsed);
       setImportText("");
       showToast("Combo imported successfully!");
-    } catch (error) {
+    } catch {
       showToast("Invalid notation format!");
     }
   }
@@ -98,17 +111,17 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
   async function save() {
     setSaving(true);
     try {
-      const user = (await supabase.auth.getUser()).data.user;
-      if (!user) { showToast("Please log in"); return; }
+      if (!user) { showToast("Please log in to save combos"); return; }
+      if (!meta.characterId) { showToast("Please select a character"); return; }
+      if (inputs.length === 0) { showToast("Please add some inputs to the combo"); return; }
 
       const comboData = {
-        character_id: characterId,
+        character_id: meta.characterId,
         user_id: user.id,
         inputs,
         name: meta.name,
         difficulty: meta.difficulty,
         tags: meta.tags.split(/[,\s]+/).filter(Boolean),
-        is_published: false,
       };
 
       if (editingCombo) {
@@ -128,8 +141,8 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
 
       reset();
       if (onSave) onSave();
-    } catch (e:any) {
-      showToast(e.message || "Failed to save");
+    } catch (e: unknown) {
+      showToast(e instanceof Error ? e.message : "Failed to save");
     } finally { setSaving(false); }
   }
 
@@ -137,7 +150,9 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
     <div className="space-y-6">
       <div className="panel p-6">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="neon-title text-2xl">2XKO COMBO MAKER</h3>
+          <h1 className="neon-title text-2xl md:text-3xl font-black tracking-wider mb-1">
+            {editingCombo ? "EDIT COMBO" : "COMBO BUILDER"}
+          </h1>
           <div className="flex items-center gap-3">
             <span className="text-lg font-bold text-foreground uppercase tracking-wider">NOTATION</span>
             <button
@@ -176,8 +191,8 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
           )}
         </div>
 
-        {/* Name, Difficulty and Tags below combo box */}
-        <div className="grid grid-cols-3 gap-4">
+        {/* Name, Difficulty, Character and Tags below combo box */}
+        <div className={`grid gap-4 ${user ? 'grid-cols-4' : 'grid-cols-3'}`}>
           <input
             value={meta.name}
             onChange={(e)=>setMeta({...meta, name:e.target.value})}
@@ -189,10 +204,23 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
             onChange={(e)=>setMeta({...meta, difficulty:e.target.value})}
             className="bg-background border-4 border-brutal-border p-3 text-lg font-bold uppercase tracking-wide focus:outline-none focus:border-neon-cyan"
           >
-            <option>EASY</option>
-            <option>MEDIUM</option>
-            <option>HARD</option>
+            <option value="">SELECT DIFFICULTY</option>
+            <option value="Easy">EASY</option>
+            <option value="Medium">MEDIUM</option>
+            <option value="Hard">HARD</option>
           </select>
+          {user && (
+            <select
+              value={meta.characterId}
+              onChange={(e)=>setMeta({...meta, characterId:e.target.value})}
+              className="bg-background border-4 border-brutal-border p-3 text-lg font-bold uppercase tracking-wide focus:outline-none focus:border-neon-cyan"
+            >
+              <option value="">SELECT CHARACTER</option>
+              {characters.map(char => (
+                <option key={char.id} value={char.id}>{char.name.toUpperCase()}</option>
+              ))}
+            </select>
+          )}
           <input
             value={meta.tags}
             onChange={(e)=>setMeta({...meta, tags:e.target.value})}
@@ -202,7 +230,7 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
         </div>
 
         {/* Import Section */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 mt-6">
           <input
             value={importText}
             onChange={(e)=>setImportText(e.target.value)}
@@ -277,22 +305,23 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
             </div>
 
             {/* Action Buttons */}
-            <div className="grid grid-cols-2 gap-1 w-full max-w-[190px] lg:w-[190px]">
+            <div className="grid grid-cols-2 gap-2 w-full max-w-[190px] lg:w-[190px]">
               {/* Row 1: Undo/Reset */}
-              <button className="brutal-btn brutal-btn--secondary py-3 text-sm text-center" onClick={undo}>UNDO</button>
-              <button className="brutal-btn brutal-btn--danger py-3 text-sm text-center" onClick={reset}>RESET</button>
+              <button className="brutal-btn brutal-btn--secondary py-4 text-sm text-center" onClick={undo}>UNDO</button>
+              <button className="brutal-btn brutal-btn--danger py-4 text-sm text-center" onClick={reset}>RESET</button>
 
               {/* Row 2: Copy/Save Image */}
-              <button className="brutal-btn brutal-btn--secondary py-3 text-xs text-center" onClick={copyNotation}>COPY NOTATION</button>
-              <button className="brutal-btn brutal-btn--primary py-3 text-sm text-center" onClick={saveAsImage}>SAVE IMAGE</button>
+              <button className="brutal-btn brutal-btn--secondary py-4 text-xs text-center" onClick={copyNotation}>COPY NOTATION</button>
+              <button className="brutal-btn brutal-btn--primary py-4 text-sm text-center" onClick={saveAsImage}>SAVE IMAGE</button>
 
               {/* Row 3: Save Combo */}
               <button
-                disabled={saving}
+                disabled={saving || !user || !meta.characterId || inputs.length === 0}
                 onClick={save}
-                className="brutal-btn brutal-btn--primary py-3 text-sm col-span-2 text-center"
+                className={`brutal-btn ${!user || !meta.characterId || inputs.length === 0 ? 'brutal-btn--secondary opacity-50' : 'brutal-btn--primary'} py-4 text-sm col-span-2 text-center`}
+                title={!user ? "Log in to save combos" : !meta.characterId ? "Select a character" : inputs.length === 0 ? "Add some inputs" : ""}
               >
-                {saving ? "SAVING..." : editingCombo ? "UPDATE COMBO" : "SAVE COMBO"}
+                {saving ? "SAVING..." : !user ? "LOG IN TO SAVE" : editingCombo ? "UPDATE COMBO" : "SAVE COMBO"}
               </button>
             </div>
           </div>
