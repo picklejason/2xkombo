@@ -6,9 +6,9 @@ import { characters } from "@/lib/characters";
 import { useAuth } from "@/lib/AuthContext";
 
 const directionalInputs: InputKey[] = ["7","8","9","4","5","6","1","2","3"];
-const row1Inputs: InputKey[] = ["L","M","H","tag"];
-const row2Inputs: InputKey[] = ["S1","S2","D","air"];
-const row3Inputs: InputKey[] = ["+","T","~","or"];
+const row1Inputs: InputKey[] = ["L","M","H","tag","air"];
+const row2Inputs: InputKey[] = ["S1","S2","D","BD","delay"];
+const row3Inputs: InputKey[] = ["+","T","~","or","whiff"];
 
 type Combo = {
   id: string;
@@ -264,9 +264,9 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
                 ))}
               </div>
 
-              {/* All Other Buttons - 3 Rows of 4 */}
-              <div className="grid grid-cols-4 gap-1">
-                {/* Row 1: L M H Tag */}
+              {/* All Other Buttons - 3 Rows of 5 */}
+              <div className="grid grid-cols-5 gap-1">
+                {/* Row 1: L M H Tag AIR */}
                 {row1Inputs.map((k)=> (
                   <button
                     key={k}
@@ -278,7 +278,7 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
                   </button>
                 ))}
 
-                {/* Row 2: S1 S2 D Parry */}
+                {/* Row 2: S1 S2 Dash Backdash DELAY */}
                 {row2Inputs.map((k)=> (
                   <button
                     key={k}
@@ -290,7 +290,7 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
                   </button>
                 ))}
 
-                {/* Row 3: + Then Hold OR */}
+                {/* Row 3: + Then ~ OR WHIFF */}
                 {row3Inputs.map((k)=> (
                   <button
                     key={k}
@@ -329,7 +329,7 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
 
         {/* Toast Notification */}
         {toast.visible && (
-          <div className="fixed bottom-4 right-4 bg-gray-900 text-white px-6 py-3 border-4 border-brutal-border box-shadow-brutal z-50">
+          <div className="fixed bottom-4 right-4 bg-gray-800 text-white px-6 py-3 border-4 border-brutal-border box-shadow-brutal z-50">
             <span className="text-sm font-bold uppercase tracking-wide">{toast.message}</span>
           </div>
         )}
@@ -354,6 +354,14 @@ function parseNotation(notation: string): InputKey[] {
       // Handle j.X notation
       result.push("air");
       result.push(...parseToken(token.substring(2)));
+    } else if (token.startsWith('dl.')) {
+      // Handle dl.X notation
+      result.push("delay");
+      result.push(...parseToken(token.substring(3)));
+    } else if (token.startsWith('w.')) {
+      // Handle w.X notation
+      result.push("whiff");
+      result.push(...parseToken(token.substring(2)));
     } else if (token.startsWith('[') && token.endsWith(']')) {
       // Handle [X] notation
       result.push("hold");
@@ -375,12 +383,28 @@ function parseToken(token: string): InputKey[] {
   if (token === "66") {
     return ["D"]; // Dash button
   }
+  if (token === "44") {
+    return ["BD"]; // Backdash button
+  }
+
+  // Handle standalone 7 or 9 as jump cancels
+  if (token === "7") {
+    return ["7jc"];
+  }
+  if (token === "9") {
+    return ["9jc"];
+  }
 
   // Handle jump cancel patterns
   if (token.endsWith("jc")) {
     const direction = token.replace("jc", "");
-    if (direction && /[1-9]/.test(direction)) {
-      return [reverseNotation(direction)];
+    if (direction === "7") {
+      return ["7jc"];
+    } else if (direction === "9") {
+      return ["9jc"];
+    } else if (direction === "") {
+      // Just "jc" by itself should be ignored/skipped
+      return [];
     }
   }
 
@@ -410,10 +434,11 @@ function parseToken(token: string): InputKey[] {
 function reverseNotation(notation: string): InputKey {
   const map: Record<string, InputKey> = {
     "1": "1", "2": "2", "3": "3", "4": "4", "5": "5", "6": "6", "7": "7", "8": "8", "9": "9",
+    "7jc": "7jc", "9jc": "9jc",
     "L": "L", "M": "M", "H": "H", "S1": "S1", "S2": "S2",
-    "+": "+", "66": "D", ">": "T", "Tag": "tag", "OR": "or", "~": "~"
+    "+": "+", "66": "D", "44": "BD", ">": "T", "Tag": "tag", "OR": "or", "~": "~"
   };
-  return map[notation] || "1";
+  return map[notation] || notation as InputKey;
 }
 
 function convertToNotation(inputs: InputKey[]): string {
@@ -452,6 +477,48 @@ function convertToNotation(inputs: InputKey[]): string {
       continue;
     }
 
+    if (current === "delay" && next) {
+      // Delay + next button becomes dl.BUTTON
+      if (isDirectional(next) && inputs[i + 2]) {
+        // Delay + direction + button (e.g., delay, 6, H)
+        const dirNotation = getBasicNotation(next);
+        const btnNotation = getBasicNotation(inputs[i + 2]);
+        if (next === "5") {
+          result.push(`dl.${btnNotation}`);
+        } else {
+          result.push(`dl.${dirNotation}${btnNotation}`);
+        }
+        i += 3; // Skip delay, direction, and button
+      } else {
+        // Delay + button directly
+        const nextNotation = getBasicNotation(next);
+        result.push(`dl.${nextNotation}`);
+        i += 2; // Skip delay and button
+      }
+      continue;
+    }
+
+    if (current === "whiff" && next) {
+      // Whiff + next button becomes w.BUTTON
+      if (isDirectional(next) && inputs[i + 2]) {
+        // Whiff + direction + button (e.g., whiff, 6, H)
+        const dirNotation = getBasicNotation(next);
+        const btnNotation = getBasicNotation(inputs[i + 2]);
+        if (next === "5") {
+          result.push(`w.${btnNotation}`);
+        } else {
+          result.push(`w.${dirNotation}${btnNotation}`);
+        }
+        i += 3; // Skip whiff, direction, and button
+      } else {
+        // Whiff + button directly
+        const nextNotation = getBasicNotation(next);
+        result.push(`w.${nextNotation}`);
+        i += 2; // Skip whiff and button
+      }
+      continue;
+    }
+
     if (current === "~") {
       // Handle X~Y notation
       const nextElement = inputs[i + 1];
@@ -485,8 +552,8 @@ function convertToNotation(inputs: InputKey[]): string {
       continue;
     }
 
-    if (prev === "air") {
-      // Skip this since it was handled in air logic
+    if (prev === "air" || prev === "delay" || prev === "whiff") {
+      // Skip this since it was handled in air/delay/whiff logic
       i++;
       continue;
     }
@@ -494,7 +561,7 @@ function convertToNotation(inputs: InputKey[]): string {
     // Handle directional + button combinations
     if (isDirectional(current) && next && !isDirectional(next) &&
         next !== "+" && next !== "T" && next !== ">" && next !== "or" &&
-        next !== "~" && next !== "hold" && next !== "air") {
+        next !== "~" && next !== "hold" && next !== "air" && next !== "delay" && next !== "whiff") {
 
       const dirNotation = getBasicNotation(current);
       const btnNotation = getBasicNotation(next);
@@ -518,7 +585,7 @@ function convertToNotation(inputs: InputKey[]): string {
 }
 
 function isDirectional(k: InputKey): boolean {
-  return ["1", "2", "3", "4", "5", "6", "7", "8", "9"].includes(k);
+  return ["1", "2", "3", "4", "5", "6", "7", "8", "9", "7jc", "9jc"].includes(k);
 }
 
 function getBasicNotation(k: InputKey): string {
@@ -532,6 +599,8 @@ function getBasicNotation(k: InputKey): string {
     case "7": return "7";
     case "8": return "8";
     case "9": return "9";
+    case "7jc": return "7jc";
+    case "9jc": return "9jc";
     case "L": return "L";
     case "M": return "M";
     case "H": return "H";
@@ -539,14 +608,17 @@ function getBasicNotation(k: InputKey): string {
     case "S2": return "S2";
     case "+": return " + ";
     case "D": return "66";
+    case "BD": return "44";
     case ">": return " > ";
     case "T": return " > ";
     case "tag": return "Tag";
     case "or": return " OR ";
     case "air": return "j.";
+    case "delay": return "dl.";
+    case "whiff": return "w.";
     case "hold": return "[hold]";
     case "~": return "~";
-    default: return String(k);
+    default: return k; // Return the custom text as-is
   }
 }
 

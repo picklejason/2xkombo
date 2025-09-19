@@ -2,6 +2,7 @@
 
 export type InputKey =
   | "1"|"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9"
+  | "7jc"|"9jc"
   | "L"
   | "M"
   | "H"
@@ -9,11 +10,14 @@ export type InputKey =
   | "S2"
   | "T"
   | "D"
+  | "BD"
   | "+"
   | ">"
   | "hold"
   | "tag"
   | "air"
+  | "delay"
+  | "whiff"
   | "or"
   | "~";
 
@@ -27,6 +31,8 @@ const keyToAsset: Record<string, string> = {
   7: "/assets/7.svg",
   8: "/assets/8.svg",
   9: "/assets/9.svg",
+  "7jc": "/assets/7.svg",
+  "9jc": "/assets/9.svg",
   L: "/assets/L.svg",
   M: "/assets/M.svg",
   H: "/assets/H.svg",
@@ -34,6 +40,7 @@ const keyToAsset: Record<string, string> = {
   S2: "/assets/S2.svg",
   T: "/assets/then.svg",
   D: "/assets/dash.svg",
+  BD: "/assets/back_dash.svg",
   "+": "/assets/plus.svg",
   ">": "/assets/then.svg",
   tag: "/assets/tag.svg",
@@ -57,18 +64,18 @@ export default function InputIcon({ k, size = 44, showBackground = true }: { k: 
     );
   }
 
-  if (k === "air" || k === "hold" || k === "or") {
-    // Text-based buttons - AIR, HOLD, OR
-    const text = k === "air" ? "AIR" : k === "hold" ? "HOLD" : "OR";
+  if (k === "air" || k === "hold" || k === "or" || k === "delay" || k === "whiff" || (!keyToAsset[k] && k !== "tag")) {
+    // Text-based buttons - AIR, HOLD, OR, DELAY, WHIFF, or custom text (but not tag)
+    const text = k === "air" ? "AIR" : k === "hold" ? "HOLD" : k === "or" ? "OR" : k === "delay" ? "DELAY" : k === "whiff" ? "WHIFF" : k.toUpperCase();
     return (
       <span
-        className={`inline-flex items-center justify-center transition ${showBackground ? 'bg-gray-900 rounded-full' : ''}`}
+        className={`inline-flex items-center justify-center transition ${showBackground ? 'bg-gray-800 rounded-full' : ''}`}
         style={{
           width: size,
           height: size
         }}
       >
-        <span className="text-xs font-bold text-white">{text}</span>
+        <span className="text-sm font-bold text-white">{text}</span>
       </span>
     );
   }
@@ -80,14 +87,14 @@ export default function InputIcon({ k, size = 44, showBackground = true }: { k: 
   if (!showBackground) {
     // Only apply special sizes in combo display
     if (k === "+") {
-      buttonWidth = 30
+      buttonWidth = 30;
       buttonHeight = 40;
     } else if (k === "T" || k === ">") {
       buttonWidth = 30;
       buttonHeight = 45;
     } else if (k === "~") {
-      buttonWidth = 20;
-      buttonHeight = 40;
+      buttonWidth = 28;
+      buttonHeight = 45;
     }
   }
 
@@ -110,20 +117,20 @@ export default function InputIcon({ k, size = 44, showBackground = true }: { k: 
 
 function chipColor(k: string): { bg: string } {
   // Icons with their own colored backgrounds don't need additional styling
-  const iconsWithBackgrounds = ["L", "M", "H", "S1", "S2"];
+  const iconsWithBackgrounds = ["L", "M", "H", "S1", "S2", "tag"];
 
   // Buttons that should not have backgrounds
-  const noBackgroundButtons = ["1", "2", "3", "4", "6", "7", "8", "9", "D"];
+  const noBackgroundButtons = ["1", "2", "3", "4", "6", "7", "8", "9", "7jc", "9jc", "D", "BD"];
 
   // Buttons that need backgrounds
-  const backgroundButtons = ["+", ">", "T", "~", "tag"];
+  const backgroundButtons = ["+", ">", "T", "~"];
 
   if (iconsWithBackgrounds.includes(k) || noBackgroundButtons.includes(k)) {
     return { bg: "bg-transparent" };
   }
 
   if (backgroundButtons.includes(k)) {
-    return { bg: "bg-gray-900 rounded-full" };
+    return { bg: "bg-gray-800 rounded-full" };
   }
 
   // Default no background
