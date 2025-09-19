@@ -323,7 +323,7 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
           </div>
         </div>
 
-        <div id="combo-display" className="flex items-center flex-wrap min-h-[100px] bg-background border-4 border-brutal-border box-shadow-brutal p-4 mb-4">
+        <div id="combo-display" className="flex items-center flex-wrap min-h-[150px] bg-background border-4 border-brutal-border box-shadow-brutal p-4 mb-4">
           {inputs.length===0 && <span className="text-foreground/70 text-lg font-bold uppercase tracking-wide">CLICK BUTTONS TO BUILD YOUR COMBO...</span>}
           {notation==="icons" ? (
             inputs.map((k, i)=> <InputIcon key={i} k={k} showBackground={false} size={56} />)

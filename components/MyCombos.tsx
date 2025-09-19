@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import InputIcon from "./InputIcon";
 import { createBrowserClient } from "@/lib/supabaseClient";
 import { characters } from "@/lib/characters";
@@ -23,6 +24,8 @@ export default function MyCombos({ characterId, onEdit }: { characterId?: string
   const [filteredItems, setFilteredItems] = useState<Combo[]>([]);
   const [loading, setLoading] = useState(true);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [dropdownPosition, setDropdownPosition] = useState<{top: number, right: number} | null>(null);
+  const dropdownButtonRefs = useRef<{[key: string]: HTMLButtonElement | null}>({});
   const [toast, setToast] = useState<{message: string; visible: boolean}>({message: "", visible: false});
   const [sortBy, setSortBy] = useState<'name' | 'difficulty' | 'created'>('created');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -137,8 +140,19 @@ export default function MyCombos({ characterId, onEdit }: { characterId?: string
     function handleClickOutside(event: MouseEvent) {
       if (openDropdown) {
         const target = event.target as Element;
-        if (!target.closest('.dropdown-container')) {
+        
+        // Check if the click is on a dropdown button
+        const isDropdownButton = Object.values(dropdownButtonRefs.current).some(ref => 
+          ref && ref.contains(target)
+        );
+        
+        // Check if the click is inside the dropdown menu (portal)
+        const dropdownElement = document.querySelector('[data-portal-dropdown]');
+        const isInsideDropdown = dropdownElement && dropdownElement.contains(target);
+        
+        if (!isDropdownButton && !isInsideDropdown) {
           setOpenDropdown(null);
+          setDropdownPosition(null);
         }
       }
     }
@@ -151,6 +165,28 @@ export default function MyCombos({ characterId, onEdit }: { characterId?: string
     setToast({message, visible: true});
     setTimeout(() => setToast({message: "", visible: false}), 3000);
   }
+
+  const handleDropdownToggle = (comboId: string) => {
+    if (openDropdown === comboId) {
+      setOpenDropdown(null);
+      setDropdownPosition(null);
+      return;
+    }
+
+    const buttonRef = dropdownButtonRefs.current[comboId];
+    if (buttonRef) {
+      const rect = buttonRef.getBoundingClientRect();
+      const scrollY = window.scrollY;
+      const scrollX = window.scrollX;
+      
+      setDropdownPosition({
+        top: rect.bottom + scrollY + 4,
+        right: window.innerWidth - rect.right - scrollX
+      });
+    }
+    
+    setOpenDropdown(comboId);
+  };
 
   function shareCombo(combo: Combo) {
     const comboData = {
@@ -302,7 +338,7 @@ export default function MyCombos({ characterId, onEdit }: { characterId?: string
 
                   <button
                     onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                    className="px-3 py-2 bgborder-brutal-border-background border-2 text-foreground text-sm font-bold"
+                    className="px-3 py-2 border-[#333333] border-4 text-foreground text-sm font-bold"
                     title={`Sort ${sortOrder === 'asc' ? 'Descending' : 'Ascending'}`}
                   >
                     {sortOrder === 'asc' ? '↑' : '↓'}
@@ -369,47 +405,13 @@ export default function MyCombos({ characterId, onEdit }: { characterId?: string
               </div>
               <div className="relative ml-4 dropdown-container">
                 <button
+                  ref={(el) => { dropdownButtonRefs.current[c.id] = el; }}
                   className="brutal-btn brutal-btn--secondary px-3 py-2 text-sm"
-                  onClick={() => setOpenDropdown(openDropdown === c.id ? null : c.id)}
+                  onClick={() => handleDropdownToggle(c.id)}
                   aria-label="More options"
                 >
                   ⋯
                 </button>
-
-                {openDropdown === c.id && (
-                  <div className="absolute right-0 top-full mt-1 bg-surface border-4 border-brutal-border box-shadow-brutal z-10 min-w-[160px]">
-                    <button
-                      className="w-full px-4 py-2 text-left text-sm font-bold uppercase tracking-wide hover:bg-background text-foreground"
-                      onClick={() => shareCombo(c)}
-                    >
-                      SHARE
-                    </button>
-                    <button
-                      className="w-full px-4 py-2 text-left text-sm font-bold uppercase tracking-wide hover:bg-background text-foreground"
-                      onClick={() => copyNotation(c)}
-                    >
-                      COPY NOTATION
-                    </button>
-                    <button
-                      className={`w-full px-4 py-2 text-left text-sm font-bold uppercase tracking-wide hover:bg-background ${c.completed ? 'text-orange-400' : 'text-green-400'}`}
-                      onClick={() => toggleCompleted(c.id, c.completed || false)}
-                    >
-                      {c.completed ? 'MARK AS NOT LEARNED' : 'MARK AS LEARNED'}
-                    </button>
-                    <button
-                      className="w-full px-4 py-2 text-left text-sm font-bold uppercase tracking-wide hover:bg-background text-foreground"
-                      onClick={() => edit(c)}
-                    >
-                      EDIT
-                    </button>
-                    <button
-                      className="w-full px-4 py-2 text-left text-sm font-bold uppercase tracking-wide hover:bg-background text-red-400"
-                      onClick={() => remove(c.id)}
-                    >
-                      DELETE
-                    </button>
-                  </div>
-                )}
               </div>
           </div>
         </div>
@@ -421,6 +423,59 @@ export default function MyCombos({ characterId, onEdit }: { characterId?: string
         <div className="fixed bottom-4 right-4 bg-gray-800 text-white px-6 py-3 border-4 border-brutal-border box-shadow-brutal z-50">
           <span className="text-sm font-bold uppercase tracking-wide">{toast.message}</span>
         </div>
+      )}
+
+      {/* Portal Dropdown */}
+      {openDropdown && dropdownPosition && typeof window !== 'undefined' && createPortal(
+        <div 
+          className="fixed bg-surface border-4 border-brutal-border box-shadow-brutal z-[10000] w-[140px]"
+          data-portal-dropdown
+          style={{
+            top: dropdownPosition.top,
+            right: dropdownPosition.right
+          }}
+        >
+          {(() => {
+            const combo = filteredItems.find(c => c.id === openDropdown);
+            if (!combo) return null;
+            
+            return (
+              <>
+                <button
+                  className="w-full px-3 py-2 text-left text-xs font-bold uppercase tracking-wide hover:bg-background text-foreground"
+                  onClick={() => shareCombo(combo)}
+                >
+                  SHARE
+                </button>
+                <button
+                  className="w-full px-3 py-2 text-left text-xs font-bold uppercase tracking-wide hover:bg-background text-foreground"
+                  onClick={() => copyNotation(combo)}
+                >
+                  COPY NOTATION
+                </button>
+                <button
+                  className={`w-full px-3 py-2 text-left text-xs font-bold uppercase tracking-wide hover:bg-background ${combo.completed ? 'text-orange-400' : 'text-green-400'}`}
+                  onClick={() => toggleCompleted(combo.id, combo.completed || false)}
+                >
+                  {combo.completed ? 'MARK AS NOT LEARNED' : 'MARK AS LEARNED'}
+                </button>
+                <button
+                  className="w-full px-3 py-2 text-left text-xs font-bold uppercase tracking-wide hover:bg-background text-foreground"
+                  onClick={() => edit(combo)}
+                >
+                  EDIT
+                </button>
+                <button
+                  className="w-full px-3 py-2 text-left text-xs font-bold uppercase tracking-wide hover:bg-background text-red-400"
+                  onClick={() => remove(combo.id)}
+                >
+                  DELETE
+                </button>
+              </>
+            );
+          })()}
+        </div>,
+        document.body
       )}
     </div>
   );
