@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import InputIcon, { InputKey } from "./InputIcon";
 import { createBrowserClient } from "@/lib/supabaseClient";
 import { characters } from "@/lib/characters";
@@ -17,6 +18,7 @@ type Combo = {
   difficulty: string;
   tags: string[];
   character_id: string;
+  completed?: boolean;
 };
 
 type Props = {
@@ -27,6 +29,7 @@ type Props = {
 
 export default function ComboBuilder({ characterId, editingCombo, onSave }: Props) {
   const { user } = useAuth();
+  const router = useRouter();
   const [inputs, setInputs] = useState<InputKey[]>([]);
   const [notation, setNotation] = useState<"icons"|"numpad">("icons");
   const [saving, setSaving] = useState(false);
@@ -35,7 +38,24 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
   const [importText, setImportText] = useState("");
   const supabase = createBrowserClient();
 
-  // Load editing combo data
+  // Check if we came from a character page
+  const cameFromCharacterPage = typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('character');
+
+  const handleBack = () => {
+    if (cameFromCharacterPage) {
+      const selectedCharacter = characters.find(char => char.id === cameFromCharacterPage);
+      if (selectedCharacter) {
+        router.push(`/c/${selectedCharacter.slug}`);
+      } else {
+        router.back();
+      }
+    } else {
+      router.back();
+    }
+  };
+
+  // Load editing combo data or shared parameters
   useEffect(() => {
     if (editingCombo) {
       setInputs(editingCombo.inputs || []);
@@ -45,6 +65,57 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
         tags: (editingCombo.tags || []).join(", "),
         characterId: editingCombo.character_id || characterId || ""
       });
+    } else {
+      // Load from URL parameters for sharing
+      const urlParams = new URLSearchParams(window.location.search);
+
+      // Check for new compressed format first
+      const compressedData = urlParams.get('c');
+      if (compressedData) {
+        try {
+          const jsonString = decodeURIComponent(escape(atob(compressedData)));
+          const comboData = JSON.parse(jsonString);
+
+          if (comboData.inputs) {
+            setInputs(comboData.inputs);
+          }
+
+          setMeta(prev => ({
+            ...prev,
+            name: comboData.name || prev.name,
+            difficulty: comboData.difficulty || prev.difficulty,
+            tags: comboData.tags || prev.tags,
+            characterId: comboData.characterId || prev.characterId
+          }));
+        } catch (error) {
+          console.error('Failed to parse shared combo data:', error);
+          showToast("Invalid share link format!");
+        }
+      } else {
+        // Fallback to old format for backward compatibility
+        const sharedInputs = urlParams.get('inputs');
+        if (sharedInputs) {
+          try {
+            const parsedInputs = JSON.parse(sharedInputs);
+            setInputs(parsedInputs);
+          } catch (error) {
+            console.error('Failed to parse shared inputs:', error);
+          }
+        }
+
+        const sharedName = urlParams.get('name');
+        const sharedDifficulty = urlParams.get('difficulty');
+        const sharedTags = urlParams.get('tags');
+
+        if (sharedName || sharedDifficulty || sharedTags) {
+          setMeta(prev => ({
+            ...prev,
+            name: sharedName || prev.name,
+            difficulty: sharedDifficulty || prev.difficulty,
+            tags: sharedTags || prev.tags
+          }));
+        }
+      }
     }
   }, [editingCombo, characterId]);
 
@@ -61,6 +132,31 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
     const numpadText = convertToNotation(inputs);
     navigator.clipboard.writeText(numpadText);
     showToast(`Copied: ${numpadText}`);
+  }
+
+  function shareCombo() {
+    const comboData = {
+      inputs: inputs.length > 0 ? inputs : undefined,
+      name: meta.name || undefined,
+      difficulty: meta.difficulty || undefined,
+      tags: meta.tags || undefined,
+      characterId: meta.characterId || undefined
+    };
+
+    // Remove undefined values to minimize payload
+    const cleanData = Object.fromEntries(
+      Object.entries(comboData).filter(([_, value]) => value !== undefined)
+    );
+
+    // Compress the data using base64 encoding
+    const jsonString = JSON.stringify(cleanData);
+    const encodedData = btoa(unescape(encodeURIComponent(jsonString)));
+
+    const shareUrl = new URL(window.location.origin);
+    shareUrl.searchParams.set('c', encodedData);
+
+    navigator.clipboard.writeText(shareUrl.toString());
+    showToast("Share link copied to clipboard!");
   }
 
   function importNotation() {
@@ -111,43 +207,99 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
   async function save() {
     setSaving(true);
     try {
-      if (!user) { showToast("Please log in to save combos"); return; }
-      if (!meta.characterId) { showToast("Please select a character"); return; }
-      if (inputs.length === 0) { showToast("Please add some inputs to the combo"); return; }
+      if (!user) {
+        showToast("Please log in to save combos");
+        setSaving(false);
+        return;
+      }
+      if (!meta.characterId) {
+        showToast("Please select a champion");
+        setSaving(false);
+        return;
+      }
+      if (inputs.length === 0) {
+        showToast("Please add some inputs to the combo");
+        setSaving(false);
+        return;
+      }
+
+      console.log("Saving combo with user:", user.id);
 
       const comboData = {
         character_id: meta.characterId,
         user_id: user.id,
         inputs,
-        name: meta.name,
-        difficulty: meta.difficulty,
-        tags: meta.tags.split(/[,\s]+/).filter(Boolean),
+        name: meta.name || null,
+        difficulty: meta.difficulty || null,
+        tags: meta.tags ? meta.tags.split(/[,\s]+/).filter(Boolean) : [],
       };
+
+      console.log("Combo data:", comboData);
 
       if (editingCombo) {
         // Update existing combo
+        const updateData = { ...comboData };
+        delete updateData.user_id; // Don't change ownership
+
         const { error } = await supabase
           .from("combos")
-          .update(comboData)
+          .update(updateData)
           .eq("id", editingCombo.id);
-        if (error) throw error;
+
+        if (error) {
+          console.error("Update error:", error);
+          throw error;
+        }
         showToast("Combo updated!");
       } else {
         // Create new combo
-        const { error } = await supabase.from("combos").insert(comboData);
-        if (error) throw error;
+        const { data, error } = await supabase
+          .from("combos")
+          .insert(comboData);
+
+        if (error) {
+          console.error("Insert combo error:", error);
+          throw error;
+        }
+
+        console.log("Combo created successfully");
         showToast("Combo saved!");
+
+        // Navigate to character page after saving
+        const selectedCharacter = characters.find(char => char.id === meta.characterId);
+        if (selectedCharacter) {
+          setTimeout(() => {
+            router.push(`/c/${selectedCharacter.slug}`);
+          }, 1000); // Wait 1 second to show the toast
+        }
       }
 
       reset();
       if (onSave) onSave();
     } catch (e: unknown) {
+      console.error("Save failed:", e);
       showToast(e instanceof Error ? e.message : "Failed to save");
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
     <div className="space-y-6">
+      {cameFromCharacterPage && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={handleBack}
+              className="brutal-btn brutal-btn--secondary px-4 py-2 text-sm"
+              aria-label="Go back to character page"
+            >
+              ← BACK
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="panel p-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="neon-title text-2xl md:text-3xl font-black tracking-wider mb-1">
@@ -215,7 +367,7 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
               onChange={(e)=>setMeta({...meta, characterId:e.target.value})}
               className="bg-background border-4 border-brutal-border p-3 text-lg font-bold uppercase tracking-wide focus:outline-none focus:border-neon-cyan"
             >
-              <option value="">SELECT CHARACTER</option>
+              <option value="">SELECT CHAMPION</option>
               {characters.map(char => (
                 <option key={char.id} value={char.id}>{char.name.toUpperCase()}</option>
               ))}
@@ -314,12 +466,22 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
               <button className="brutal-btn brutal-btn--secondary py-4 text-xs text-center" onClick={copyNotation}>COPY NOTATION</button>
               <button className="brutal-btn brutal-btn--primary py-4 text-sm text-center" onClick={saveAsImage}>SAVE IMAGE</button>
 
-              {/* Row 3: Save Combo */}
+              {/* Row 3: Share */}
               <button
-                disabled={saving || !user || !meta.characterId || inputs.length === 0}
+                className="brutal-btn brutal-btn--secondary py-4 text-sm text-center col-span-2"
+                onClick={shareCombo}
+                disabled={inputs.length === 0}
+                title={inputs.length === 0 ? "Add some inputs to share" : "Share this combo"}
+              >
+                SHARE COMBO
+              </button>
+
+              {/* Row 4: Save Combo */}
+              <button
+                disabled={saving}
                 onClick={save}
-                className={`brutal-btn ${!user || !meta.characterId || inputs.length === 0 ? 'brutal-btn--secondary opacity-50' : 'brutal-btn--primary'} py-4 text-sm col-span-2 text-center`}
-                title={!user ? "Log in to save combos" : !meta.characterId ? "Select a character" : inputs.length === 0 ? "Add some inputs" : ""}
+                className={`brutal-btn ${!user || !meta.characterId || inputs.length === 0 ? 'brutal-btn--secondary' : 'brutal-btn--primary'} py-4 text-sm col-span-2 text-center`}
+                title={!user ? "Click to see login message" : !meta.characterId ? "Click to see champion message" : inputs.length === 0 ? "Click to see inputs message" : ""}
               >
                 {saving ? "SAVING..." : !user ? "LOG IN TO SAVE" : editingCombo ? "UPDATE COMBO" : "SAVE COMBO"}
               </button>

@@ -13,6 +13,7 @@ type Combo = {
   difficulty: string;
   tags: string[];
   character_id: string;
+  completed?: boolean;
 };
 
 export default function CharacterPage() {
