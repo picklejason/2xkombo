@@ -2,7 +2,8 @@
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import ComboBuilder from "@/components/ComboBuilder";
-import { createBrowserClient } from "@/lib/supabaseClient";
+import AuthToast from "@/components/AuthToast";
+import { createClient } from "@/utils/supabase/client";
 import { InputKey } from "@/components/InputIcon";
 
 type Combo = {
@@ -19,7 +20,7 @@ function HomeContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [editingCombo, setEditingCombo] = useState<Combo | null>(null);
-  const supabase = createBrowserClient();
+  const supabase = createClient();
   const characterId = searchParams.get('character');
 
   useEffect(() => {
@@ -85,6 +86,7 @@ function HomeContent() {
 export default function Home() {
   return (
     <Suspense fallback={<div className="text-white">Loading...</div>}>
+      <AuthToast />
       <HomeContent />
     </Suspense>
   );

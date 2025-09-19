@@ -6,7 +6,7 @@ interface LogoLinkProps {
   children: ReactNode;
 }
 
-export function LogoLink({ children }: LogoLinkProps) {
+export default function LogoLink({ children }: LogoLinkProps) {
   const router = useRouter();
 
   const handleClick = (e: React.MouseEvent) => {

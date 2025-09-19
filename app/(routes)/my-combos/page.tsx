@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { characters } from "@/lib/characters";
 import CharacterCard from "@/components/CharacterCard";
 import { useAuth } from "@/lib/AuthContext";
-import { createBrowserClient } from "@/lib/supabaseClient";
+import { createClient } from "@/utils/supabase/client";
 
 export default function MyCombosPage() {
   const { user } = useAuth();

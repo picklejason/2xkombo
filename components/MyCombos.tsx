@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import InputIcon from "./InputIcon";
-import { createBrowserClient } from "@/lib/supabaseClient";
+import { createClient } from "@/utils/supabase/client";
 import { characters } from "@/lib/characters";
 import { useAuth } from "@/lib/AuthContext";
 import { InputKey } from "./InputIcon";
@@ -19,7 +19,7 @@ type Combo = {
 
 export default function MyCombos({ characterId, onEdit }: { characterId?: string; onEdit?: (combo: Combo) => void }) {
   const { user, loading: authLoading } = useAuth();
-  const supabase = createBrowserClient();
+  const supabase = createClient();
   const [items, setItems] = useState<Combo[]>([]);
   const [filteredItems, setFilteredItems] = useState<Combo[]>([]);
   const [loading, setLoading] = useState(true);

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/AuthContext";
 
 export function Navigation() {
-  const { user, loading, signOut } = useAuth();
+  const { user, loading } = useAuth();
 
   if (loading) {
     return (
@@ -27,13 +27,15 @@ export function Navigation() {
         </Link>
       )}
       {user ? (
-        <button
-          onClick={signOut}
-          className="brutal-btn brutal-btn--secondary"
-          aria-label="Sign out of your account"
-        >
-          SIGN OUT
-        </button>
+        <form action="/auth/signout" method="post">
+          <button
+            type="submit"
+            className="brutal-btn brutal-btn--secondary"
+            aria-label="Sign out of your account"
+          >
+            SIGN OUT
+          </button>
+        </form>
       ) : (
         <>
           <Link

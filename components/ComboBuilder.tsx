@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import InputIcon, { InputKey } from "./InputIcon";
-import { createBrowserClient } from "@/lib/supabaseClient";
+import { createClient } from "@/utils/supabase/client";
 import { characters } from "@/lib/characters";
 import { useAuth } from "@/lib/AuthContext";
 
@@ -37,7 +37,7 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
   const [toast, setToast] = useState<{message: string; visible: boolean}>({message: "", visible: false});
   const [importText, setImportText] = useState("");
   const [cameFromCharacterPage, setCameFromCharacterPage] = useState<string | null>(null);
-  const supabase = createBrowserClient();
+  const supabase = createClient();
 
   const handleBack = () => {
     if (cameFromCharacterPage) {
