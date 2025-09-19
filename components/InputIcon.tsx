@@ -1,6 +1,27 @@
 "use client";
 import Image from "next/image";
 
+// Size constants for combo display optimization
+const COMBO_DISPLAY_SIZES = {
+  air: { width: 30, height: 40 },
+  or: { width: 24, height: 40 },
+  "~": { width: 16, height: 40 },
+  delay: { width: 44, height: 40 },
+  whiff: { width: 44, height: 40 },
+  "+": { width: 32, height: 40 },
+  ">": { width: 36, height: 40 },
+} as const;
+
+// Text labels for special inputs
+const INPUT_LABELS = {
+  air: "AIR",
+  hold: "HOLD",
+  or: "OR",
+  delay: "DELAY",
+  whiff: "WHIFF",
+  "~": "~",
+} as const;
+
 export type InputKey =
   | "1"|"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9"
   | "7jc"|"9jc"
@@ -39,13 +60,25 @@ const keyToAsset: Record<string, string> = {
   H: "/assets/H.svg",
   S1: "/assets/S1.svg",
   S2: "/assets/S2.svg",
-  T: "/assets/then.svg",
   D: "/assets/dash.svg",
   BD: "/assets/back_dash.svg",
   "+": "/assets/plus.svg",
   ">": "/assets/then.svg",
   tag: "/assets/tag.svg",
 };
+
+// Helper function to get optimized size for combo display and buttons
+function getDisplaySize(key: InputKey, defaultSize: number, showBackground: boolean) {
+  if (showBackground || !(key in COMBO_DISPLAY_SIZES)) {
+    return { width: defaultSize, height: defaultSize };
+  }
+  return COMBO_DISPLAY_SIZES[key as keyof typeof COMBO_DISPLAY_SIZES];
+}
+
+// Helper function to check if input should be text-based
+function isTextBasedInput(key: InputKey): boolean {
+  return key in INPUT_LABELS || (!keyToAsset[key] && key !== "tag");
+}
 
 export default function InputIcon({ k, size = 44, showBackground = true }: { k: InputKey; size?: number; showBackground?: boolean }) {
   const src = keyToAsset[k];
@@ -65,50 +98,35 @@ export default function InputIcon({ k, size = 44, showBackground = true }: { k: 
     );
   }
 
-  if (k === "air" || k === "hold" || k === "or" || k === "delay" || k === "whiff" || (!keyToAsset[k] && k !== "tag")) {
-    // Text-based buttons - AIR, HOLD, OR, DELAY, WHIFF, or custom text (but not tag)
-    const text = k === "air" ? "AIR" : k === "hold" ? "HOLD" : k === "or" ? "OR" : k === "delay" ? "DELAY" : k === "whiff" ? "WHIFF" : k.toUpperCase();
+  if (isTextBasedInput(k)) {
+    // Text-based buttons
+    const text = (k in INPUT_LABELS) ? INPUT_LABELS[k as keyof typeof INPUT_LABELS] : k.toUpperCase();
+    const { width, height } = getDisplaySize(k, size, showBackground);
+
     return (
       <span
         className={`inline-flex items-center justify-center transition ${showBackground ? 'bg-gray-800 rounded-full' : ''}`}
-        style={{
-          width: size,
-          height: size
-        }}
+        style={{ width, height }}
       >
         <span className="text-sm font-bold text-white">{text}</span>
       </span>
     );
   }
 
-  // Handle special sizes for transition buttons only in combo display
-  let buttonWidth = size;
-  let buttonHeight = size;
+  // Icon-based inputs
+  const { width, height } = getDisplaySize(k, size, showBackground);
 
-  if (!showBackground) {
-    // Only apply special sizes in combo display
-    if (k === "+") {
-      buttonWidth = 30;
-      buttonHeight = 40;
-    } else if (k === "T" || k === ">") {
-      buttonWidth = 30;
-      buttonHeight = 45;
-    } else if (k === "~") {
-      buttonWidth = 28;
-      buttonHeight = 45;
-    }
-  }
+  // Make the ">" image slightly smaller while keeping container the same size
+  const imageWidth = k === ">" && showBackground ? width * 0.75 : width;
+  const imageHeight = k === ">" && showBackground ? height * 0.75 : height;
 
   return (
     <span
       className={`inline-flex items-center justify-center transition ${showBackground ? color.bg : ''}`}
-      style={{
-        width: buttonWidth,
-        height: buttonHeight
-      }}
+      style={{ width, height }}
     >
       {src ? (
-        <Image src={src} alt={k} width={buttonWidth} height={buttonHeight} className="w-full h-full object-contain" />
+        <Image src={src} alt={k} width={imageWidth} height={imageHeight} className="object-contain" />
       ) : (
         <span className="text-sm font-bold">{k}</span>
       )}
@@ -124,7 +142,7 @@ function chipColor(k: string): { bg: string } {
   const noBackgroundButtons = ["1", "2", "3", "4", "6", "7", "8", "9", "7jc", "9jc", "D", "BD"];
 
   // Buttons that need backgrounds
-  const backgroundButtons = ["+", ">", "T", "~"];
+  const backgroundButtons = ["+", ">", "~"];
 
   if (iconsWithBackgrounds.includes(k) || noBackgroundButtons.includes(k)) {
     return { bg: "bg-transparent" };

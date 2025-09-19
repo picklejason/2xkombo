@@ -9,7 +9,7 @@ import { useAuth } from "@/lib/AuthContext";
 const directionalInputs: InputKey[] = ["7","8","9","4","5","6","1","2","3"];
 const row1Inputs: InputKey[] = ["L","M","H","tag","air"];
 const row2Inputs: InputKey[] = ["S1","S2","D","BD","delay"];
-const row3Inputs: InputKey[] = ["+","T","~","or","whiff"];
+const row3Inputs: InputKey[] = ["+",">","~","or","whiff"];
 
 type Combo = {
   id: string;
@@ -328,19 +328,21 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
           {notation==="icons" ? (
             inputs.map((k, i)=> <InputIcon key={i} k={k} showBackground={false} size={56} />)
           ) : (
-            convertToNotation(inputs).split(/(\s+)/).map((part, i) =>
-              part.trim() ? (
+            convertToNotation(inputs).split(/(\s+)/).map((part, i) => {
+              if (!part.trim()) {
+                return <span key={i}>{part}</span>;
+              }
+
+              return (
                 <span
                   key={i}
-                  className="px-3 py-2 bg-surface text-lg font-bold tracking-wide"
+                  className="px-1 text-lg font-bold tracking-wide"
                   style={{ textTransform: part.startsWith('j.') ? 'none' : 'uppercase' }}
                 >
                   {part}
                 </span>
-              ) : (
-                <span key={i}>{part}</span>
-              )
-            )
+              );
+            })
           )}
         </div>
 
@@ -388,7 +390,8 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
             value={importText}
             onChange={(e)=>setImportText(e.target.value)}
             className="flex-1 bg-background border-4 border-brutal-border p-3 text-lg font-bold tracking-wide focus:outline-none focus:border-neon-cyan"
-            placeholder="PASTE NUMPAD NOTATION TO IMPORT..."
+            placeholder="ENTER NUMPAD NOTATION TO IMPORT..."
+            style={{ textTransform: 'none' }}
           />
           <button
             onClick={importNotation}
@@ -513,23 +516,30 @@ function parseNotation(notation: string): InputKey[] {
       result.push(...parseToken(x));
       result.push("~");
       result.push(...parseToken(y));
-    } else if (token.startsWith('j.')) {
-      // Handle j.X notation
+    } else if (token.includes('/')) {
+      // Handle X/Y notation (or)
+      const [x, y] = token.split('/');
+      result.push(...parseToken(x));
+      result.push("or");
+      result.push(...parseToken(y));
+    } else if (token.startsWith('j.') || token.startsWith('J.')) {
+      // Handle j.X or J.X notation
       result.push("air");
       result.push(...parseToken(token.substring(2)));
-    } else if (token.startsWith('dl.')) {
-      // Handle dl.X notation
+    } else if (token.startsWith('dl.') || token.startsWith('DL.') || token.startsWith('d.') || token.startsWith('D.')) {
+      // Handle dl.X, DL.X, d.X, or D.X notation
       result.push("delay");
-      result.push(...parseToken(token.substring(3)));
-    } else if (token.startsWith('w.')) {
-      // Handle w.X notation
+      const prefixLength = token.startsWith('dl.') || token.startsWith('DL.') ? 3 : 2;
+      result.push(...parseToken(token.substring(prefixLength)));
+    } else if (token.startsWith('w.') || token.startsWith('W.')) {
+      // Handle w.X or W.X notation
       result.push("whiff");
       result.push(...parseToken(token.substring(2)));
     } else if (token.startsWith('[') && token.endsWith(']')) {
       // Handle [X] notation
       result.push("hold");
       result.push(...parseToken(token.slice(1, -1)));
-    } else if (token === '+' || token === '>' || token === 'OR') {
+    } else if (token === '+' || token === '>' || token === 'OR' || token === 'or' || token === '/') {
       // Handle connectors
       result.push(reverseNotation(token));
     } else {
@@ -559,15 +569,15 @@ function parseToken(token: string): InputKey[] {
   }
 
   // Handle jump cancel patterns
-  if (token.endsWith("jc")) {
-    const direction = token.replace("jc", "");
+  if (token.endsWith("jc") || token.endsWith("JC")) {
+    const direction = token.replace(/jc|JC/i, "");
     if (direction === "7") {
       return ["7jc"];
     } else if (direction === "9") {
       return ["9jc"];
     } else if (direction === "") {
-      // Just "jc" by itself should be ignored/skipped
-      return [];
+      // Just "jc" or "JC" by itself should be directional input 9
+      return ["9"];
     }
   }
 
@@ -599,7 +609,9 @@ function reverseNotation(notation: string): InputKey {
     "1": "1", "2": "2", "3": "3", "4": "4", "5": "5", "6": "6", "7": "7", "8": "8", "9": "9",
     "7jc": "7jc", "9jc": "9jc",
     "L": "L", "M": "M", "H": "H", "S1": "S1", "S2": "S2",
-    "+": "+", "66": "D", "44": "BD", ">": "T", "Tag": "tag", "OR": "or", "~": "~"
+    "l": "L", "m": "M", "h": "H", "s1": "S1", "s2": "S2",
+    "+": "+", "66": "D", "44": "BD", ">": ">", "Tag": "tag", "tag": "tag", "OR": "or", "or": "or", "/": "or", "~": "~",
+    "jc": "9", "JC": "9", "dl": "delay", "DL": "delay", "d": "delay", "D": "delay"
   };
   return map[notation] || notation as InputKey;
 }
@@ -773,9 +785,8 @@ function getBasicNotation(k: InputKey): string {
     case "D": return "66";
     case "BD": return "44";
     case ">": return " > ";
-    case "T": return " > ";
     case "tag": return "Tag";
-    case "or": return " OR ";
+    case "or": return "/";
     case "air": return "j.";
     case "delay": return "dl.";
     case "whiff": return "w.";
