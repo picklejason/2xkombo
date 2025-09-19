@@ -11,6 +11,7 @@ type Combo = {
   name: string;
   inputs: InputKey[];
   difficulty: string;
+  damage: string;
   tags: string[];
   character_id: string;
   completed?: boolean;
@@ -24,7 +25,7 @@ export default function CharacterPage() {
 
   const handleEdit = (combo: Combo) => {
     // Navigate to home page (combo builder) with the combo data in URL state
-    router.push(`/?edit=${combo.id}`);
+    router.push(`/?edit=${combo.id}&returnTo=character&characterSlug=${character.slug}`);
   };
 
   if (!character) {

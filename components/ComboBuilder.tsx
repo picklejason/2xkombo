@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import InputIcon, { InputKey } from "./InputIcon";
+import ComboDisplay from "./ComboDisplay";
 import { createClient } from "@/utils/supabase/client";
 import { characters } from "@/lib/characters";
 import { useAuth } from "@/lib/AuthContext";
@@ -16,6 +17,7 @@ type Combo = {
   name: string;
   inputs: InputKey[];
   difficulty: string;
+  damage: string;
   tags: string[];
   character_id: string;
   completed?: boolean;
@@ -33,7 +35,7 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
   const [inputs, setInputs] = useState<InputKey[]>([]);
   const [notation, setNotation] = useState<"icons"|"numpad">("icons");
   const [saving, setSaving] = useState(false);
-  const [meta, setMeta] = useState({ name: "", difficulty: "", tags: "", characterId: characterId || "" });
+  const [meta, setMeta] = useState({ name: "", difficulty: "", damage: "", tags: "", characterId: characterId || "" });
   const [toast, setToast] = useState<{message: string; visible: boolean}>({message: "", visible: false});
   const [importText, setImportText] = useState("");
   const [cameFromCharacterPage, setCameFromCharacterPage] = useState<string | null>(null);
@@ -59,6 +61,7 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
       setMeta({
         name: editingCombo.name || "",
         difficulty: editingCombo.difficulty || "",
+        damage: editingCombo.damage || "",
         tags: (editingCombo.tags || []).join(", "),
         characterId: editingCombo.character_id || characterId || ""
       });
@@ -85,6 +88,7 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
             ...prev,
             name: comboData.name || prev.name,
             difficulty: comboData.difficulty || prev.difficulty,
+            damage: comboData.damage || prev.damage,
             tags: comboData.tags || prev.tags,
             characterId: comboData.characterId || prev.characterId
           }));
@@ -108,11 +112,14 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
         const sharedDifficulty = urlParams.get('difficulty');
         const sharedTags = urlParams.get('tags');
 
-        if (sharedName || sharedDifficulty || sharedTags) {
+        const sharedDamage = urlParams.get('damage');
+
+        if (sharedName || sharedDifficulty || sharedDamage || sharedTags) {
           setMeta(prev => ({
             ...prev,
             name: sharedName || prev.name,
             difficulty: sharedDifficulty || prev.difficulty,
+            damage: sharedDamage || prev.damage,
             tags: sharedTags || prev.tags
           }));
         }
@@ -140,6 +147,7 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
       inputs: inputs.length > 0 ? inputs : undefined,
       name: meta.name || undefined,
       difficulty: meta.difficulty || undefined,
+      damage: meta.damage || undefined,
       tags: meta.tags || undefined,
       characterId: meta.characterId || undefined
     };
@@ -232,6 +240,7 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
         inputs,
         name: meta.name || null,
         difficulty: meta.difficulty || null,
+        damage: meta.damage || null,
         tags: meta.tags ? meta.tags.split(/[,\s]+/).filter(Boolean) : [],
       };
 
@@ -323,31 +332,17 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
           </div>
         </div>
 
-        <div id="combo-display" className="flex items-center flex-wrap min-h-[150px] bg-background border-4 border-brutal-border box-shadow-brutal p-4 mb-4">
-          {inputs.length===0 && <span className="text-foreground/70 text-lg font-bold uppercase tracking-wide">CLICK BUTTONS TO BUILD YOUR COMBO...</span>}
-          {notation==="icons" ? (
-            inputs.map((k, i)=> <InputIcon key={i} k={k} showBackground={false} size={56} />)
-          ) : (
-            convertToNotation(inputs).split(/(\s+)/).map((part, i) => {
-              if (!part.trim()) {
-                return <span key={i}>{part}</span>;
-              }
+        <ComboDisplay
+          inputs={inputs}
+          notation={notation}
+          className="min-h-[150px] bg-background border-4 border-brutal-border box-shadow-brutal p-4 mb-4"
+          id="combo-display"
+          showBackground={false}
+          size={56}
+        />
 
-              return (
-                <span
-                  key={i}
-                  className="px-1 text-lg font-bold tracking-wide"
-                  style={{ textTransform: part.startsWith('j.') ? 'none' : 'uppercase' }}
-                >
-                  {part}
-                </span>
-              );
-            })
-          )}
-        </div>
-
-        {/* Name, Difficulty, Character and Tags below combo box */}
-        <div className={`grid gap-4 ${user ? 'grid-cols-4' : 'grid-cols-3'}`}>
+        {/* Name, Difficulty, Damage, Character and Tags below combo box */}
+        <div className={`grid gap-4 ${user ? 'grid-cols-5' : 'grid-cols-4'}`}>
           <input
             value={meta.name}
             onChange={(e)=>setMeta({...meta, name:e.target.value})}
@@ -359,11 +354,17 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
             onChange={(e)=>setMeta({...meta, difficulty:e.target.value})}
             className="bg-background border-4 border-brutal-border p-3 text-lg font-bold uppercase tracking-wide focus:outline-none focus:border-neon-cyan"
           >
-            <option value="">SELECT DIFFICULTY</option>
+            <option value="">DIFFICULTY</option>
             <option value="Easy">EASY</option>
             <option value="Medium">MEDIUM</option>
             <option value="Hard">HARD</option>
           </select>
+          <input
+            value={meta.damage}
+            onChange={(e)=>setMeta({...meta, damage:e.target.value})}
+            className="bg-background border-4 border-brutal-border p-3 text-lg font-bold uppercase tracking-wide focus:outline-none focus:border-neon-cyan"
+            placeholder="DAMAGE"
+          />
           {user && (
             <select
               value={meta.characterId}
@@ -509,6 +510,14 @@ function parseNotation(notation: string): InputKey[] {
 
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i];
+    const nextToken = tokens[i + 1];
+
+    // Handle directional + jc combinations (e.g., "7 jc", "9 jc")
+    if ((token === "7" || token === "9") && (nextToken && nextToken.toLowerCase() === "jc")) {
+      result.push(`${token}jc` as InputKey);
+      i++; // Skip the next token since we processed it
+      continue;
+    }
 
     if (token.includes('~')) {
       // Handle X~Y notation
@@ -542,8 +551,11 @@ function parseNotation(notation: string): InputKey[] {
     } else if (token === '+' || token === '>' || token === 'OR' || token === 'or' || token === '/') {
       // Handle connectors
       result.push(reverseNotation(token));
+    } else if (token.toLowerCase() === 'jc') {
+      // Handle standalone "jc" - keep as "jc" for numpad display but treat as directional for icons
+      result.push("jc");
     } else {
-      // Handle complex tokens like 2H, 6H, 9, jc
+      // Handle complex tokens like 2H, 6H, 9, etc.
       result.push(...parseToken(token));
     }
   }
@@ -568,17 +580,15 @@ function parseToken(token: string): InputKey[] {
     return ["9jc"];
   }
 
-  // Handle jump cancel patterns
-  if (token.endsWith("jc") || token.endsWith("JC")) {
-    const direction = token.replace(/jc|JC/i, "");
+  // Handle jump cancel patterns for combined tokens (e.g., "7jc", "9jc")
+  if (token.toLowerCase().endsWith("jc")) {
+    const direction = token.replace(/jc/i, "");
     if (direction === "7") {
       return ["7jc"];
     } else if (direction === "9") {
       return ["9jc"];
-    } else if (direction === "") {
-      // Just "jc" or "JC" by itself should be directional input 9
-      return ["9"];
     }
+    // Don't handle standalone "jc" here - it's handled in parseNotation
   }
 
   // Handle directional + button combinations
@@ -605,15 +615,15 @@ function parseToken(token: string): InputKey[] {
 }
 
 function reverseNotation(notation: string): InputKey {
+  const lowerNotation = notation.toLowerCase();
   const map: Record<string, InputKey> = {
     "1": "1", "2": "2", "3": "3", "4": "4", "5": "5", "6": "6", "7": "7", "8": "8", "9": "9",
     "7jc": "7jc", "9jc": "9jc",
-    "L": "L", "M": "M", "H": "H", "S1": "S1", "S2": "S2",
     "l": "L", "m": "M", "h": "H", "s1": "S1", "s2": "S2",
-    "+": "+", "66": "D", "44": "BD", ">": ">", "Tag": "tag", "tag": "tag", "OR": "or", "or": "or", "/": "or", "~": "~",
-    "jc": "9", "JC": "9", "dl": "delay", "DL": "delay", "d": "delay", "D": "delay"
+    "+": "+", "66": "D", "44": "BD", ">": ">", "tag": "tag", "or": "or", "/": "or", "~": "~",
+    "dl": "delay", "d": "delay"
   };
-  return map[notation] || notation as InputKey;
+  return map[lowerNotation] || notation as InputKey;
 }
 
 function convertToNotation(inputs: InputKey[]): string {
@@ -760,7 +770,7 @@ function convertToNotation(inputs: InputKey[]): string {
 }
 
 function isDirectional(k: InputKey): boolean {
-  return ["1", "2", "3", "4", "5", "6", "7", "8", "9", "7jc", "9jc"].includes(k);
+  return ["1", "2", "3", "4", "5", "6", "7", "8", "9", "7jc", "9jc", "jc"].includes(k);
 }
 
 function getBasicNotation(k: InputKey): string {
@@ -776,6 +786,7 @@ function getBasicNotation(k: InputKey): string {
     case "9": return "9";
     case "7jc": return "7jc";
     case "9jc": return "9jc";
+    case "jc": return "jc";
     case "L": return "L";
     case "M": return "M";
     case "H": return "H";
@@ -785,14 +796,14 @@ function getBasicNotation(k: InputKey): string {
     case "D": return "66";
     case "BD": return "44";
     case ">": return " > ";
-    case "tag": return "Tag";
+    case "tag": return "TAG";
     case "or": return "/";
     case "air": return "j.";
-    case "delay": return "dl.";
+    case "delay": return "d.";
     case "whiff": return "w.";
-    case "hold": return "[hold]";
+    case "hold": return "[HOLD]";
     case "~": return "~";
-    default: return k; // Return the custom text as-is
+    default: return k.toUpperCase(); // Everything else uppercase by default
   }
 }
 

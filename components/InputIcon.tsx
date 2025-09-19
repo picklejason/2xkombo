@@ -24,7 +24,7 @@ const INPUT_LABELS = {
 
 export type InputKey =
   | "1"|"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9"
-  | "7jc"|"9jc"
+  | "7jc"|"9jc"|"jc"
   | "L"
   | "M"
   | "H"
@@ -55,6 +55,7 @@ const keyToAsset: Record<string, string> = {
   9: "/assets/9.svg",
   "7jc": "/assets/7.svg",
   "9jc": "/assets/9.svg",
+  "jc": "/assets/9.svg",
   L: "/assets/L.svg",
   M: "/assets/M.svg",
   H: "/assets/H.svg",

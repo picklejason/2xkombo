@@ -11,6 +11,7 @@ type Combo = {
   name: string;
   inputs: InputKey[];
   difficulty: string;
+  damage: string;
   tags: string[];
   character_id: string;
   completed?: boolean;
@@ -50,12 +51,29 @@ function HomeContent() {
   }, [searchParams, supabase]);
 
   const handleBack = () => {
-    router.back();
+    // Check if we should return to a character page
+    const returnTo = searchParams.get('returnTo');
+    const characterSlug = searchParams.get('characterSlug');
+
+    if (returnTo === 'character' && characterSlug) {
+      router.push(`/c/${characterSlug}`);
+    } else {
+      router.back();
+    }
   };
 
   const handleSave = () => {
     setEditingCombo(null);
-    router.push('/');
+
+    // Check if we should return to a character page
+    const returnTo = searchParams.get('returnTo');
+    const characterSlug = searchParams.get('characterSlug');
+
+    if (returnTo === 'character' && characterSlug) {
+      router.push(`/c/${characterSlug}`);
+    } else {
+      router.push('/');
+    }
   };
 
   return (

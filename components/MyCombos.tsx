@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import InputIcon from "./InputIcon";
+import ComboDisplay from "./ComboDisplay";
 import { createClient } from "@/utils/supabase/client";
 import { useAuth } from "@/lib/AuthContext";
 import { InputKey } from "./InputIcon";
@@ -11,6 +12,7 @@ type Combo = {
   name: string;
   inputs: InputKey[];
   difficulty: string;
+  damage: string;
   tags: string[];
   character_id: string;
   completed?: boolean;
@@ -49,7 +51,7 @@ export default function MyCombos({ characterId, onEdit }: { characterId?: string
 
     let query = supabase
       .from("combos")
-      .select("id, name, inputs, difficulty, tags, character_id, completed")
+      .select("id, name, inputs, difficulty, damage, tags, character_id, completed")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
@@ -192,6 +194,7 @@ export default function MyCombos({ characterId, onEdit }: { characterId?: string
       inputs: combo.inputs.length > 0 ? combo.inputs : undefined,
       name: combo.name || undefined,
       difficulty: combo.difficulty || undefined,
+      damage: combo.damage || undefined,
       tags: combo.tags?.length > 0 ? combo.tags.join(", ") : undefined,
       characterId: combo.character_id || undefined
     };
@@ -389,12 +392,20 @@ export default function MyCombos({ characterId, onEdit }: { characterId?: string
                     )}
                   </div>
                 )}
-                <div className="flex items-center gap-2 flex-wrap mb-3">
-                  {c.inputs.map((k,i)=> <InputIcon key={i} k={k as InputKey} showBackground={false} size={56} />)}
+                <div className="mb-3">
+                  <ComboDisplay
+                    inputs={c.inputs}
+                    notation="icons"
+                    showBackground={false}
+                    size={56}
+                  />
                 </div>
                 <div className={`text-sm font-bold flex items-center gap-4 ${c.completed ? 'text-black' : 'text-foreground'}`}>
                   {c.difficulty && (
                     <span className="uppercase tracking-wide">DIFFICULTY: {c.difficulty.toUpperCase()}</span>
+                  )}
+                  {c.damage && String(c.damage).trim() && (
+                    <span className="uppercase tracking-wide">DAMAGE: {String(c.damage).toUpperCase()}</span>
                   )}
                   {c.tags && c.tags.length > 0 && (
                     <span className="uppercase tracking-wide">TAGS: {c.tags.join(", ").toUpperCase()}</span>
@@ -479,6 +490,7 @@ export default function MyCombos({ characterId, onEdit }: { characterId?: string
   );
 }
 
+// Import convertToNotation from ComboDisplay if needed for copyNotation function
 function convertToNotation(inputs: InputKey[]): string {
   const result: string[] = [];
   let i = 0;
@@ -623,7 +635,7 @@ function convertToNotation(inputs: InputKey[]): string {
 }
 
 function isDirectional(k: InputKey): boolean {
-  return ["1", "2", "3", "4", "5", "6", "7", "8", "9", "7jc", "9jc"].includes(k);
+  return ["1", "2", "3", "4", "5", "6", "7", "8", "9", "7jc", "9jc", "jc"].includes(k);
 }
 
 function getBasicNotation(k: InputKey): string {
@@ -639,6 +651,7 @@ function getBasicNotation(k: InputKey): string {
     case "9": return "9";
     case "7jc": return "7jc";
     case "9jc": return "9jc";
+    case "jc": return "jc";
     case "L": return "L";
     case "M": return "M";
     case "H": return "H";
@@ -648,15 +661,14 @@ function getBasicNotation(k: InputKey): string {
     case "D": return "66";
     case "BD": return "44";
     case ">": return " > ";
-    case "T": return " > ";
-    case "tag": return "Tag";
-    case "or": return " OR ";
+    case "tag": return "TAG";
+    case "or": return "/";
     case "air": return "j.";
-    case "delay": return "dl.";
+    case "delay": return "d.";
     case "whiff": return "w.";
-    case "hold": return "[hold]";
+    case "hold": return "[HOLD]";
     case "~": return "~";
-    default: return k; // Return the custom text as-is
+    default: return k.toUpperCase(); // Everything else uppercase by default
   }
 }
 
