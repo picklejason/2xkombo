@@ -10,7 +10,7 @@ import { Footer } from "@/components/Footer";
 const roboto = Roboto({ subsets: ["latin"], weight: ["400","500","700"], variable: "--font-shapiro" });
 
 export const metadata: Metadata = {
-  title: "2XKOmbo",
+  title: "2XKOMBO",
   description: "Share and save 2XKO combos",
 };
 
@@ -27,7 +27,7 @@ export default function RootLayout({
             <header className="app-header">
               <nav className="app-nav" role="navigation" aria-label="Main navigation">
                 <LogoLink>
-                  <span className="neon-title text-2xl font-bold tracking-wide">2XKOmbo</span>
+                  <span className="neon-title text-2xl font-bold tracking-wide">2XKOMBO</span>
                 </LogoLink>
                 <Navigation />
               </nav>

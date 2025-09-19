@@ -1,4 +1,4 @@
-2XKombo — Share and save 2XKO combos. Built with Next.js 15, Tailwind v4, Supabase.
+2XKOMBO — Share and save 2XKO combos. Built with Next.js 15, Tailwind v4, Supabase.
 
 ## Getting Started
 

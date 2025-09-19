@@ -19,7 +19,7 @@ export default function LogoLink({ children }: LogoLinkProps) {
     <button
       onClick={handleClick}
       className="app-nav__brand"
-      aria-label="2XKOmbo homepage"
+      aria-label="2XKOMBO homepage"
     >
       {children}
     </button>
