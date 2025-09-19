@@ -5,6 +5,7 @@ import { Roboto } from "next/font/google";
 import { AuthProvider } from "@/lib/AuthContext";
 import { Navigation } from "@/components/Navigation";
 import { LogoLink } from "@/components/LogoLink";
+import { Footer } from "@/components/Footer";
 
 const roboto = Roboto({ subsets: ["latin"], weight: ["400","500","700"], variable: "--font-shapiro" });
 
@@ -33,6 +34,7 @@ export default function RootLayout({
           <main className="app-main" role="main">
             {children}
           </main>
+          <Footer />
         </AuthProvider>
       </body>
     </html>
