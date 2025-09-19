@@ -34,9 +34,10 @@ export default function CharacterPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-6">
-          <div className="flex-shrink-0">
+      {/* Mobile-First Character Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
+          <div className="flex-shrink-0 mx-auto md:mx-0">
             <CharacterImage
               name={character.name}
               src={character.portraitUrl}
@@ -44,16 +45,16 @@ export default function CharacterPage() {
               size={128}
             />
           </div>
-          <div>
-            <h1 className="neon-title text-2xl md:text-3xl font-black tracking-wider mb-1">
+          <div className="text-center md:text-left">
+            <h1 className="neon-title text-xl md:text-2xl lg:text-3xl font-black tracking-wider mb-1">
               {character.name.toUpperCase()} COMBOS
             </h1>
           </div>
         </div>
-        <div>
+        <div className="w-full md:w-auto">
           <a
             href={`/?character=${character.id}`}
-            className="brutal-btn brutal-btn--primary px-6 py-3"
+            className="brutal-btn brutal-btn--primary px-6 py-3 w-full md:w-auto text-center block"
           >
             CREATE COMBO
           </a>

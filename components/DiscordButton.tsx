@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Image from "next/image";
 import { createClient } from "@/utils/supabase/client";
 
 export default function DiscordButton() {
@@ -28,7 +29,7 @@ export default function DiscordButton() {
       disabled={loading}
       className="brutal-btn brutal-btn--primary w-full flex items-center justify-center gap-2"
     >
-      <img src="/assets/logo-discord.svg" alt="Discord" className="w-6 h-6" />
+      <Image src="/assets/logo-discord.svg" alt="Discord" width={24} height={24} />
       <span className="text-xs">{loading ? "CONNECTING..." : "SIGN IN WITH DISCORD"}</span>
     </button>
   );

@@ -311,186 +311,198 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
       )}
 
       <div className="panel p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="neon-title text-2xl md:text-3xl font-black tracking-wider mb-1">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+          <h1 className="neon-title text-xl md:text-2xl lg:text-3xl font-black tracking-wider text-center md:text-left">
             {editingCombo ? "EDIT COMBO" : "COMBO BUILDER"}
           </h1>
-          <div className="flex items-center gap-3">
-            <span className="text-lg font-bold text-foreground uppercase tracking-wider">NOTATION</span>
-            <button
-              className={`brutal-btn ${notation==="icons" ? "brutal-btn--primary" : "brutal-btn--secondary"}`}
-              onClick={()=>setNotation("icons")}
-            >
-              ICON
-            </button>
-            <button
-              className={`brutal-btn ${notation==="numpad" ? "brutal-btn--primary" : "brutal-btn--secondary"}`}
-              onClick={()=>setNotation("numpad")}
-            >
-              NUMPAD
-            </button>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full md:w-auto">
+            <span className="text-lg font-bold text-foreground uppercase tracking-wider text-center sm:text-left">NOTATION</span>
+            <div className="flex gap-2 justify-center sm:justify-start">
+              <button
+                className={`brutal-btn ${notation==="icons" ? "brutal-btn--primary" : "brutal-btn--secondary"} px-4 py-2 text-sm flex-1 sm:flex-none`}
+                onClick={()=>setNotation("icons")}
+              >
+                ICON
+              </button>
+              <button
+                className={`brutal-btn ${notation==="numpad" ? "brutal-btn--primary" : "brutal-btn--secondary"} px-4 py-2 text-sm flex-1 sm:flex-none`}
+                onClick={()=>setNotation("numpad")}
+              >
+                NUMPAD
+              </button>
+            </div>
           </div>
         </div>
 
         <ComboDisplay
           inputs={inputs}
           notation={notation}
-          className="min-h-[150px] bg-background border-4 border-brutal-border box-shadow-brutal p-4 mb-4"
+          className="combo-display-area min-h-[150px] bg-background border-4 border-brutal-border box-shadow-brutal p-4 mb-4"
           id="combo-display"
           showBackground={false}
           size={56}
         />
-
-        {/* Name, Difficulty, Damage, Character and Tags below combo box */}
-        <div className={`grid gap-4 ${user ? 'grid-cols-5' : 'grid-cols-4'}`}>
-          <input
-            value={meta.name}
-            onChange={(e)=>setMeta({...meta, name:e.target.value})}
-            className="bg-background border-4 border-brutal-border p-3 text-lg font-bold uppercase tracking-wide focus:outline-none focus:border-neon-cyan"
-            placeholder="NAME"
-          />
-          <select
-            value={meta.difficulty}
-            onChange={(e)=>setMeta({...meta, difficulty:e.target.value})}
-            className="bg-background border-4 border-brutal-border p-3 text-lg font-bold uppercase tracking-wide focus:outline-none focus:border-neon-cyan"
-          >
-            <option value="">DIFFICULTY</option>
-            <option value="Easy">EASY</option>
-            <option value="Medium">MEDIUM</option>
-            <option value="Hard">HARD</option>
-          </select>
-          <input
-            value={meta.damage}
-            onChange={(e)=>setMeta({...meta, damage:e.target.value})}
-            className="bg-background border-4 border-brutal-border p-3 text-lg font-bold uppercase tracking-wide focus:outline-none focus:border-neon-cyan"
-            placeholder="DAMAGE"
-          />
-          {user && (
-            <select
-              value={meta.characterId}
-              onChange={(e)=>setMeta({...meta, characterId:e.target.value})}
-              className="bg-background border-4 border-brutal-border p-3 text-lg font-bold uppercase tracking-wide focus:outline-none focus:border-neon-cyan"
-            >
-              <option value="">SELECT CHAMPION</option>
-              {characters.map(char => (
-                <option key={char.id} value={char.id}>{char.name.toUpperCase()}</option>
-              ))}
-            </select>
-          )}
-          <input
-            value={meta.tags}
-            onChange={(e)=>setMeta({...meta, tags:e.target.value})}
-            className="bg-background border-4 border-brutal-border p-3 text-lg font-bold uppercase tracking-wide focus:outline-none focus:border-neon-cyan"
-            placeholder="TAGS"
-          />
-        </div>
-
-        {/* Import Section */}
-        <div className="flex gap-2 mt-6">
-          <input
-            value={importText}
-            onChange={(e)=>setImportText(e.target.value)}
-            className="flex-1 bg-background border-4 border-brutal-border p-3 text-lg font-bold tracking-wide focus:outline-none focus:border-neon-cyan"
-            placeholder="ENTER NUMPAD NOTATION TO IMPORT..."
-            style={{ textTransform: 'none' }}
-          />
-          <button
-            onClick={importNotation}
-            className="brutal-btn brutal-btn--secondary px-6 py-3 text-sm"
-            disabled={!importText.trim()}
-          >
-            IMPORT
-          </button>
-        </div>
       </div>
 
-      <div className="panel p-2 lg:p-4">
-        <div className="flex flex-col lg:flex-row items-center justify-center gap-4">
-            <div className="flex items-center gap-2 lg:gap-4">
-              {/* Directional Inputs - 3x3 Grid */}
-              <div className="grid grid-cols-3 gap-1">
-                {directionalInputs.map((k)=> (
-                  <button
-                    key={k}
-                    className="p-1 lg:p-2 hover:transform hover:-translate-y-1 transition-all duration-150 flex items-center justify-center"
-                    style={{ width: '70px', height: '70px' }}
-                    onClick={()=>add(k)}
-                  >
-                    <InputIcon k={k} size={56} />
-                  </button>
-                ))}
+      <div className="panel p-2 lg:p-4 combo-builder-container">
+        <div className="flex flex-col gap-6 input-grid">
+          {/* Input Buttons Section - Mobile Optimized Layout */}
+          <div className="flex flex-col lg:flex-row items-center justify-center gap-6 min-h-full">
+            {/* Input Controls */}
+            <div className="flex flex-col md:flex-row lg:flex-row gap-4 w-full lg:w-auto items-center justify-center">
+              {/* Directional Inputs - Side by side on desktop, stacked on mobile */}
+              <div className="flex justify-center items-center">
+                <div className="grid grid-cols-3 gap-2 input-row justify-items-center">
+                  {directionalInputs.map((k)=> (
+                    <button
+                      key={k}
+                      className="input-button p-1 lg:p-2 hover:transform hover:-translate-y-1 transition-all duration-150 flex items-center justify-center"
+                      style={{ width: '80px', height: '80px' }}
+                      onClick={()=>add(k)}
+                    >
+                      <InputIcon k={k} size={64} />
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              {/* All Other Buttons - 3 Rows of 5 */}
-              <div className="grid grid-cols-5 gap-1">
-                {/* Row 1: L M H Tag AIR */}
-                {row1Inputs.map((k)=> (
-                  <button
-                    key={k}
-                    className="p-1 lg:p-2 hover:transform hover:-translate-y-1 transition-all duration-150 flex items-center justify-center"
-                    style={{ width: '70px', height: '70px' }}
-                    onClick={()=>add(k)}
-                  >
-                    <InputIcon k={k} size={56} />
-                  </button>
-                ))}
+              {/* All Other Buttons - Responsive Layout */}
+              <div className="flex justify-center items-center">
+                <div className="grid grid-cols-5 gap-2 justify-items-center">
+                  {/* Row 1: L M H Tag AIR */}
+                  {row1Inputs.map((k)=> (
+                    <button
+                      key={k}
+                      className="input-button p-1 lg:p-2 hover:transform hover:-translate-y-1 transition-all duration-150 flex items-center justify-center"
+                      style={{ width: '80px', height: '80px' }}
+                      onClick={()=>add(k)}
+                    >
+                      <InputIcon k={k} size={64} />
+                    </button>
+                  ))}
 
-                {/* Row 2: S1 S2 Dash Backdash DELAY */}
-                {row2Inputs.map((k)=> (
-                  <button
-                    key={k}
-                    className="p-1 lg:p-2 hover:transform hover:-translate-y-1 transition-all duration-150 flex items-center justify-center"
-                    style={{ width: '70px', height: '70px' }}
-                    onClick={()=>add(k)}
-                  >
-                    <InputIcon k={k} size={56} />
-                  </button>
-                ))}
+                  {/* Row 2: S1 S2 Dash Backdash DELAY */}
+                  {row2Inputs.map((k)=> (
+                    <button
+                      key={k}
+                      className="input-button p-1 lg:p-2 hover:transform hover:-translate-y-1 transition-all duration-150 flex items-center justify-center"
+                      style={{ width: '80px', height: '80px' }}
+                      onClick={()=>add(k)}
+                    >
+                      <InputIcon k={k} size={64} />
+                    </button>
+                  ))}
 
-                {/* Row 3: + Then ~ OR WHIFF */}
-                {row3Inputs.map((k)=> (
-                  <button
-                    key={k}
-                    className="p-1 lg:p-2 hover:transform hover:-translate-y-1 transition-all duration-150 flex items-center justify-center"
-                    style={{ width: '70px', height: '70px' }}
-                    onClick={()=>add(k)}
-                  >
-                    <InputIcon k={k} size={56} />
-                  </button>
-                ))}
+                  {/* Row 3: + Then ~ OR WHIFF */}
+                  {row3Inputs.map((k)=> (
+                    <button
+                      key={k}
+                      className="input-button p-1 lg:p-2 hover:transform hover:-translate-y-1 transition-all duration-150 flex items-center justify-center"
+                      style={{ width: '80px', height: '80px' }}
+                      onClick={()=>add(k)}
+                    >
+                      <InputIcon k={k} size={64} />
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="grid grid-cols-2 gap-2 w-full max-w-[190px] lg:w-[190px]">
-              {/* Row 1: Undo/Reset */}
-              <button className="brutal-btn brutal-btn--secondary py-4 text-sm text-center" onClick={undo}>UNDO</button>
-              <button className="brutal-btn brutal-btn--danger py-4 text-sm text-center" onClick={reset}>RESET</button>
+            {/* Right Side: Form Fields and Action Buttons - Flex to fill space */}
+            <div className="flex flex-col lg:flex-row gap-4 flex-1">
+              {/* Form Fields Column - Flex to fill remaining space */}
+              <div className="space-y-2 flex-1">
+                <input
+                  value={meta.name}
+                  onChange={(e)=>setMeta({...meta, name:e.target.value})}
+                  className="w-full bg-background border-4 border-brutal-border p-3 text-sm font-bold uppercase tracking-wide focus:outline-none focus:border-neon-cyan"
+                  placeholder="NAME"
+                />
+                <select
+                  value={meta.difficulty}
+                  onChange={(e)=>setMeta({...meta, difficulty:e.target.value})}
+                  className="w-full bg-background border-4 border-brutal-border p-3 text-sm font-bold uppercase tracking-wide focus:outline-none focus:border-neon-cyan"
+                >
+                  <option value="">DIFFICULTY</option>
+                  <option value="Easy">EASY</option>
+                  <option value="Medium">MEDIUM</option>
+                  <option value="Hard">HARD</option>
+                </select>
+                <input
+                  value={meta.damage}
+                  onChange={(e)=>setMeta({...meta, damage:e.target.value})}
+                  className="w-full bg-background border-4 border-brutal-border p-3 text-sm font-bold uppercase tracking-wide focus:outline-none focus:border-neon-cyan"
+                  placeholder="DAMAGE"
+                />
+                {user && (
+                  <select
+                    value={meta.characterId}
+                    onChange={(e)=>setMeta({...meta, characterId:e.target.value})}
+                    className="w-full bg-background border-4 border-brutal-border p-3 text-sm font-bold uppercase tracking-wide focus:outline-none focus:border-neon-cyan"
+                  >
+                    <option value="">SELECT CHAMPION</option>
+                    {characters.map(char => (
+                      <option key={char.id} value={char.id}>{char.name.toUpperCase()}</option>
+                    ))}
+                  </select>
+                )}
+                <input
+                  value={meta.tags}
+                  onChange={(e)=>setMeta({...meta, tags:e.target.value})}
+                  className="w-full bg-background border-4 border-brutal-border p-3 text-sm font-bold uppercase tracking-wide focus:outline-none focus:border-neon-cyan"
+                  placeholder="TAGS"
+                />
+              </div>
 
-              {/* Row 2: Copy/Save Image */}
-              <button className="brutal-btn brutal-btn--secondary py-4 text-xs text-center" onClick={copyNotation}>COPY NOTATION</button>
-              <button className="brutal-btn brutal-btn--primary py-4 text-sm text-center" onClick={saveAsImage}>SAVE IMAGE</button>
+              {/* Action Buttons Column - Fixed size */}
+              <div className="action-buttons grid grid-cols-2 gap-2 w-full lg:w-48 lg:flex-shrink-0">
+                {/* Row 1: Undo/Reset */}
+                <button className="brutal-btn brutal-btn--secondary py-4 text-sm text-center" onClick={undo}>UNDO</button>
+                <button className="brutal-btn brutal-btn--danger py-4 text-sm text-center" onClick={reset}>RESET</button>
 
-              {/* Row 3: Share */}
-              <button
-                className="brutal-btn brutal-btn--secondary py-4 text-sm text-center col-span-2"
-                onClick={shareCombo}
-                disabled={inputs.length === 0}
-                title={inputs.length === 0 ? "Add some inputs to share" : "Share this combo"}
-              >
-                SHARE COMBO
-              </button>
+                {/* Row 2: Copy/Save Image */}
+                <button className="brutal-btn brutal-btn--secondary py-3 text-xs text-center" onClick={copyNotation}>COPY NOTATION</button>
+                <button className="brutal-btn brutal-btn--primary py-3 text-xs text-center" onClick={saveAsImage}>SAVE IMAGE</button>
 
-              {/* Row 4: Save Combo */}
-              <button
-                disabled={saving}
-                onClick={save}
-                className={`brutal-btn ${!user || !meta.characterId || inputs.length === 0 ? 'brutal-btn--secondary' : 'brutal-btn--primary'} py-4 text-sm col-span-2 text-center`}
-                title={!user ? "Sign in with Discord to save combos" : !meta.characterId ? "Click to see champion message" : inputs.length === 0 ? "Click to see inputs message" : ""}
-              >
-                {saving ? "SAVING..." : !user ? "SAVE COMBO" : editingCombo ? "UPDATE COMBO" : "SAVE COMBO"}
-              </button>
+                {/* Row 3: Share */}
+                <button
+                  className="brutal-btn brutal-btn--secondary py-4 text-sm text-center col-span-2"
+                  onClick={shareCombo}
+                  disabled={inputs.length === 0}
+                  title={inputs.length === 0 ? "Add some inputs to share" : "Share this combo"}
+                >
+                  SHARE COMBO
+                </button>
+
+                {/* Row 4: Save Combo */}
+                <button
+                  disabled={saving}
+                  onClick={save}
+                  className={`brutal-btn ${!user || !meta.characterId || inputs.length === 0 ? 'brutal-btn--secondary' : 'brutal-btn--primary'} py-4 text-sm col-span-2 text-center`}
+                  title={!user ? "Sign in with Discord to save combos" : !meta.characterId ? "Click to see champion message" : inputs.length === 0 ? "Click to see inputs message" : ""}
+                >
+                  {saving ? "SAVING..." : !user ? "SAVE COMBO" : editingCombo ? "UPDATE COMBO" : "SAVE COMBO"}
+                </button>
+              </div>
             </div>
+          </div>
+
+          {/* Import Section - Full width to match other elements */}
+          <div className="flex flex-col md:flex-row gap-2 w-full">
+            <input
+              value={importText}
+              onChange={(e)=>setImportText(e.target.value)}
+              className="flex-1 bg-background border-4 border-brutal-border p-3 text-lg font-bold tracking-wide focus:outline-none focus:border-neon-cyan"
+              placeholder="ENTER NUMPAD NOTATION TO IMPORT..."
+              style={{ textTransform: 'none' }}
+            />
+            <button
+              onClick={importNotation}
+              className="brutal-btn brutal-btn--secondary px-6 py-3 text-sm md:flex-shrink-0"
+              disabled={!importText.trim()}
+            >
+              IMPORT
+            </button>
           </div>
         </div>
 
@@ -500,6 +512,7 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
             <span className="text-sm font-bold uppercase tracking-wide">{toast.message}</span>
           </div>
         )}
+      </div>
     </div>
   );
 }

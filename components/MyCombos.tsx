@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
-import InputIcon from "./InputIcon";
 import ComboDisplay from "./ComboDisplay";
 import { createClient } from "@/utils/supabase/client";
 import { useAuth } from "@/lib/AuthContext";
@@ -25,8 +24,9 @@ export default function MyCombos({ characterId, onEdit }: { characterId?: string
   const [filteredItems, setFilteredItems] = useState<Combo[]>([]);
   const [loading, setLoading] = useState(true);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-  const [dropdownPosition, setDropdownPosition] = useState<{top: number, right: number} | null>(null);
+  const [dropdownPosition, setDropdownPosition] = useState<{top: number, left: number, maxHeight?: number} | null>(null);
   const dropdownButtonRefs = useRef<{[key: string]: HTMLButtonElement | null}>({});
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
   const [toast, setToast] = useState<{message: string; visible: boolean}>({message: "", visible: false});
   const [sortBy, setSortBy] = useState<'name' | 'difficulty' | 'created'>('created');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -86,7 +86,7 @@ export default function MyCombos({ characterId, onEdit }: { characterId?: string
     if (tagFilter.trim()) {
       const filterTerm = tagFilter.toLowerCase().trim();
       filtered = filtered.filter(combo =>
-        combo.tags.some(tag => tag.toLowerCase().includes(filterTerm)) ||
+        combo.tags?.some(tag => tag.toLowerCase().includes(filterTerm)) ||
         combo.name?.toLowerCase().includes(filterTerm)
       );
     }
@@ -103,7 +103,7 @@ export default function MyCombos({ characterId, onEdit }: { characterId?: string
     // Apply difficulty filter
     if (difficultyFilter !== 'all') {
       filtered = filtered.filter(combo =>
-        combo.difficulty.toLowerCase() === difficultyFilter
+        combo.difficulty?.toLowerCase() === difficultyFilter
       );
     }
 
@@ -141,16 +141,15 @@ export default function MyCombos({ characterId, onEdit }: { characterId?: string
     function handleClickOutside(event: MouseEvent) {
       if (openDropdown) {
         const target = event.target as Element;
-        
+
         // Check if the click is on a dropdown button
-        const isDropdownButton = Object.values(dropdownButtonRefs.current).some(ref => 
+        const isDropdownButton = Object.values(dropdownButtonRefs.current).some(ref =>
           ref && ref.contains(target)
         );
-        
-        // Check if the click is inside the dropdown menu (portal)
-        const dropdownElement = document.querySelector('[data-portal-dropdown]');
-        const isInsideDropdown = dropdownElement && dropdownElement.contains(target);
-        
+
+        // Check if the click is inside the dropdown menu
+        const isInsideDropdown = dropdownRef.current && dropdownRef.current.contains(target);
+
         if (!isDropdownButton && !isInsideDropdown) {
           setOpenDropdown(null);
           setDropdownPosition(null);
@@ -158,14 +157,82 @@ export default function MyCombos({ characterId, onEdit }: { characterId?: string
       }
     }
 
+    function handleScroll() {
+      if (openDropdown) {
+        const buttonRef = dropdownButtonRefs.current[openDropdown];
+        if (buttonRef) {
+          const position = calculateDropdownPosition(buttonRef);
+          setDropdownPosition(position);
+        }
+      }
+    }
+
+    function handleResize() {
+      if (openDropdown) {
+        const buttonRef = dropdownButtonRefs.current[openDropdown];
+        if (buttonRef) {
+          const position = calculateDropdownPosition(buttonRef);
+          setDropdownPosition(position);
+        }
+      }
+    }
+
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleResize, { passive: true });
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleResize);
+    };
   }, [openDropdown]);
 
   function showToast(message: string) {
     setToast({message, visible: true});
     setTimeout(() => setToast({message: "", visible: false}), 3000);
   }
+
+  const calculateDropdownPosition = (buttonElement: HTMLButtonElement) => {
+    const buttonRect = buttonElement.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const dropdownWidth = 160; // Estimated dropdown width
+    const dropdownHeight = 200; // Estimated dropdown height (5 items * ~40px each)
+    const spacing = 4;
+
+    let top = buttonRect.bottom + spacing;
+    let left = buttonRect.right - dropdownWidth;
+
+    // Handle viewport boundaries - vertical
+    if (top + dropdownHeight > viewportHeight) {
+      // Position above button if there's more space
+      const spaceAbove = buttonRect.top - spacing;
+      const spaceBelow = viewportHeight - buttonRect.bottom - spacing;
+
+      if (spaceAbove > spaceBelow && spaceAbove >= dropdownHeight) {
+        top = buttonRect.top - dropdownHeight - spacing;
+      } else {
+        // Keep below but adjust height if needed
+        top = buttonRect.bottom + spacing;
+        const availableHeight = viewportHeight - top - 16; // 16px bottom margin
+        return {
+          top,
+          left: Math.max(16, Math.min(left, viewportWidth - dropdownWidth - 16)),
+          maxHeight: Math.max(120, availableHeight)
+        };
+      }
+    }
+
+    // Handle viewport boundaries - horizontal
+    if (left < 16) {
+      left = 16; // 16px left margin
+    } else if (left + dropdownWidth > viewportWidth - 16) {
+      left = viewportWidth - dropdownWidth - 16; // 16px right margin
+    }
+
+    return { top, left };
+  };
 
   const handleDropdownToggle = (comboId: string) => {
     if (openDropdown === comboId) {
@@ -176,16 +243,10 @@ export default function MyCombos({ characterId, onEdit }: { characterId?: string
 
     const buttonRef = dropdownButtonRefs.current[comboId];
     if (buttonRef) {
-      const rect = buttonRef.getBoundingClientRect();
-      const scrollY = window.scrollY;
-      const scrollX = window.scrollX;
-      
-      setDropdownPosition({
-        top: rect.bottom + scrollY + 4,
-        right: window.innerWidth - rect.right - scrollX
-      });
+      const position = calculateDropdownPosition(buttonRef);
+      setDropdownPosition(position);
     }
-    
+
     setOpenDropdown(comboId);
   };
 
@@ -287,36 +348,41 @@ export default function MyCombos({ characterId, onEdit }: { characterId?: string
           {/* Search, Filter and Sort Controls */}
           <div className="panel p-4">
             <div className="flex flex-col gap-4">
-              {/* Top row: Search, Filter, Sort */}
-              <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
+              {/* Single Row Layout */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
                 {/* Search Input */}
-                <div className="flex-1">
+                <div className="col-span-1 md:col-span-4">
                   <input
                     type="text"
                     placeholder="Search by tags or name..."
                     value={tagFilter}
                     onChange={(e) => setTagFilter(e.target.value)}
-                    className="w-full px-3 py-2 bg-background border-2 border-brutal-border text-foreground text-sm font-bold uppercase tracking-wide focus:outline-none focus:border-neon-cyan"
+                    className="w-full px-4 py-4 bg-background border-2 border-brutal-border text-foreground text-sm font-bold uppercase tracking-wide focus:outline-none focus:border-neon-cyan min-h-[56px]"
                   />
                 </div>
 
-                {/* Filter Controls */}
-                <div className="flex gap-2 items-center">
-                  <span className="text-sm font-bold uppercase tracking-wide text-foreground/70">FILTER:</span>
-                  <select
-                    value={completedFilter}
-                    onChange={(e) => setCompletedFilter(e.target.value as 'all' | 'learned' | 'not-learned')}
-                    className="px-3 py-2 bg-background border-2 border-brutal-border text-foreground text-sm font-bold uppercase tracking-wide focus:outline-none focus:border-neon-cyan"
-                  >
-                    <option value="all">ALL STATUS</option>
-                    <option value="learned">LEARNED</option>
-                    <option value="not-learned">NOT LEARNED</option>
-                  </select>
+                {/* Filter Label and Status */}
+                <div className="col-span-1 md:col-span-2">
+                  <div className="flex flex-col gap-2">
+                    <span className="text-xs font-bold uppercase tracking-wide text-foreground/70">FILTER:</span>
+                    <select
+                      value={completedFilter}
+                      onChange={(e) => setCompletedFilter(e.target.value as 'all' | 'learned' | 'not-learned')}
+                      className="w-full px-4 py-4 bg-background border-2 border-brutal-border text-foreground text-sm font-bold uppercase tracking-wide focus:outline-none focus:border-neon-cyan min-h-[56px]"
+                    >
+                      <option value="all">ALL STATUS</option>
+                      <option value="learned">LEARNED</option>
+                      <option value="not-learned">NOT LEARNED</option>
+                    </select>
+                  </div>
+                </div>
 
+                {/* Difficulty Filter */}
+                <div className="col-span-1 md:col-span-2">
                   <select
                     value={difficultyFilter}
                     onChange={(e) => setDifficultyFilter(e.target.value as 'all' | 'easy' | 'medium' | 'hard')}
-                    className="px-3 py-2 bg-background border-2 border-brutal-border text-foreground text-sm font-bold uppercase tracking-wide focus:outline-none focus:border-neon-cyan"
+                    className="w-full px-4 py-4 bg-background border-2 border-brutal-border text-foreground text-sm font-bold uppercase tracking-wide focus:outline-none focus:border-neon-cyan min-h-[56px]"
                   >
                     <option value="all">ALL DIFFICULTY</option>
                     <option value="easy">EASY</option>
@@ -325,26 +391,29 @@ export default function MyCombos({ characterId, onEdit }: { characterId?: string
                   </select>
                 </div>
 
-                {/* Sort Controls */}
-                <div className="flex gap-2 items-center">
-                  <span className="text-sm font-bold uppercase tracking-wide text-foreground/70">SORT:</span>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as 'name' | 'difficulty' | 'created')}
-                    className="px-3 py-2 bg-background border-2 border-brutal-border text-foreground text-sm font-bold uppercase tracking-wide focus:outline-none focus:border-neon-cyan"
-                  >
-                    <option value="created">NEWEST</option>
-                    <option value="name">NAME</option>
-                    <option value="difficulty">DIFFICULTY</option>
-                  </select>
-
-                  <button
-                    onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                    className="px-3 py-2 border-[#333333] border-4 text-foreground text-sm font-bold"
-                    title={`Sort ${sortOrder === 'asc' ? 'Descending' : 'Ascending'}`}
-                  >
-                    {sortOrder === 'asc' ? '↑' : '↓'}
-                  </button>
+                {/* Sort Controls Grouped */}
+                <div className="col-span-1 md:col-span-4">
+                  <div className="flex flex-col gap-2">
+                    <span className="text-xs font-bold uppercase tracking-wide text-foreground/70">SORT:</span>
+                    <div className="flex gap-1">
+                      <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value as 'name' | 'difficulty' | 'created')}
+                        className="flex-1 px-4 py-4 bg-background border-2 border-brutal-border text-foreground text-sm font-bold uppercase tracking-wide focus:outline-none focus:border-neon-cyan min-h-[56px]"
+                      >
+                        <option value="created">NEWEST</option>
+                        <option value="name">NAME</option>
+                        <option value="difficulty">DIFFICULTY</option>
+                      </select>
+                      <button
+                        onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                        className="brutal-btn brutal-btn--secondary !w-[56px] !h-[56px] !min-w-[56px] !min-h-[56px] !p-0 text-xl flex-shrink-0"
+                        title={`Sort ${sortOrder === 'asc' ? 'Descending' : 'Ascending'}`}
+                      >
+                        {sortOrder === 'asc' ? '↑' : '↓'}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -383,7 +452,7 @@ export default function MyCombos({ characterId, onEdit }: { characterId?: string
         return (
           <div key={c.id} className={`panel p-4 ${c.completed ? 'opacity-75 bg-green-900/20' : ''}`}>
             <div className="flex items-center justify-between">
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 {c.name && (
                   <div className={`text-lg font-bold uppercase tracking-wide mb-2 ${c.completed ? 'text-black' : 'text-neon-cyan'}`}>
                     {c.name}
@@ -400,26 +469,28 @@ export default function MyCombos({ characterId, onEdit }: { characterId?: string
                     size={56}
                   />
                 </div>
-                <div className={`text-sm font-bold flex items-center gap-4 ${c.completed ? 'text-black' : 'text-foreground'}`}>
+                <div className={`text-sm font-bold flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 ${c.completed ? 'text-black' : 'text-foreground'}`}>
                   {c.difficulty && (
-                    <span className="uppercase tracking-wide">DIFFICULTY: {c.difficulty.toUpperCase()}</span>
+                    <span className="uppercase tracking-wide">DIFFICULTY: {c.difficulty?.toUpperCase()}</span>
                   )}
                   {c.damage && String(c.damage).trim() && (
                     <span className="uppercase tracking-wide">DAMAGE: {String(c.damage).toUpperCase()}</span>
                   )}
                   {c.tags && c.tags.length > 0 && (
-                    <span className="uppercase tracking-wide">TAGS: {c.tags.join(", ").toUpperCase()}</span>
+                    <span className="uppercase tracking-wide break-words">TAGS: {c.tags?.join(", ").toUpperCase()}</span>
                   )}
                 </div>
               </div>
-              <div className="relative ml-4 dropdown-container">
+              <div className="flex items-center justify-center ml-2 sm:ml-4">
                 <button
                   ref={(el) => { dropdownButtonRefs.current[c.id] = el; }}
-                  className="brutal-btn brutal-btn--secondary px-3 py-2 text-sm"
+                  className="brutal-btn brutal-btn--secondary px-2 py-2 sm:px-3 sm:py-2 text-base sm:text-sm !min-w-[36px] !min-h-[36px] !w-[36px] !h-[36px] sm:!min-w-auto sm:!min-h-auto sm:!w-auto sm:!h-auto flex items-center justify-center"
                   onClick={() => handleDropdownToggle(c.id)}
                   aria-label="More options"
+                  title="More options"
                 >
-                  ⋯
+                  <span className="block sm:hidden text-center">⋮</span>
+                  <span className="hidden sm:block text-center">⋯</span>
                 </button>
               </div>
           </div>
@@ -436,12 +507,13 @@ export default function MyCombos({ characterId, onEdit }: { characterId?: string
 
       {/* Portal Dropdown */}
       {openDropdown && dropdownPosition && typeof window !== 'undefined' && createPortal(
-        <div 
-          className="fixed bg-surface border-4 border-brutal-border box-shadow-brutal z-[10000] w-[140px]"
-          data-portal-dropdown
+        <div
+          ref={dropdownRef}
+          className="fixed bg-surface border-4 border-brutal-border box-shadow-brutal z-[10000] w-[160px] overflow-y-auto"
           style={{
             top: dropdownPosition.top,
-            right: dropdownPosition.right
+            left: dropdownPosition.left,
+            maxHeight: dropdownPosition.maxHeight || 'auto'
           }}
         >
           {(() => {
