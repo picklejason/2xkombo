@@ -24,6 +24,6 @@ export async function GET(request: Request) {
     }
   }
 
-  // return the user to an error page with instructions
-  return NextResponse.redirect(`${origin}/auth/auth-code-error`)
+  // return the user to home page with error message
+  return NextResponse.redirect(`${origin}/?message=Authentication failed. Please try again.`)
 }

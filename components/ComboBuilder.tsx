@@ -485,9 +485,9 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
                 disabled={saving}
                 onClick={save}
                 className={`brutal-btn ${!user || !meta.characterId || inputs.length === 0 ? 'brutal-btn--secondary' : 'brutal-btn--primary'} py-4 text-sm col-span-2 text-center`}
-                title={!user ? "Click to see login message" : !meta.characterId ? "Click to see champion message" : inputs.length === 0 ? "Click to see inputs message" : ""}
+                title={!user ? "Sign in with Discord to save combos" : !meta.characterId ? "Click to see champion message" : inputs.length === 0 ? "Click to see inputs message" : ""}
               >
-                {saving ? "SAVING..." : !user ? "LOG IN TO SAVE" : editingCombo ? "UPDATE COMBO" : "SAVE COMBO"}
+                {saving ? "SAVING..." : !user ? "SAVE COMBO" : editingCombo ? "UPDATE COMBO" : "SAVE COMBO"}
               </button>
             </div>
           </div>

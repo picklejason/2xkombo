@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useAuth } from "@/lib/AuthContext";
+import DiscordButton from "@/components/DiscordButton";
 
 export function Navigation() {
   const { user, loading } = useAuth();
@@ -37,22 +38,9 @@ export function Navigation() {
           </button>
         </form>
       ) : (
-        <>
-          <Link
-            href="/login"
-            className="brutal-btn brutal-btn--secondary"
-            aria-label="Log in to your account"
-          >
-            LOG IN
-          </Link>
-          <Link
-            href="/signup"
-            className="brutal-btn brutal-btn--primary"
-            aria-label="Create new account"
-          >
-            SIGN UP
-          </Link>
-        </>
+        <div className="w-64">
+          <DiscordButton />
+        </div>
       )}
     </div>
   );
