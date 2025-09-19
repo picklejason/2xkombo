@@ -3,7 +3,6 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import InputIcon from "./InputIcon";
 import { createClient } from "@/utils/supabase/client";
-import { characters } from "@/lib/characters";
 import { useAuth } from "@/lib/AuthContext";
 import { InputKey } from "./InputIcon";
 
@@ -199,7 +198,7 @@ export default function MyCombos({ characterId, onEdit }: { characterId?: string
 
     // Remove undefined values to minimize payload
     const cleanData = Object.fromEntries(
-      Object.entries(comboData).filter(([_, value]) => value !== undefined)
+      Object.entries(comboData).filter(([, value]) => value !== undefined)
     );
 
     // Compress the data using base64 encoding
@@ -378,7 +377,6 @@ export default function MyCombos({ characterId, onEdit }: { characterId?: string
       )}
 
       {filteredItems.map((c) => {
-        const character = characters.find(char => char.id === c.character_id);
         return (
           <div key={c.id} className={`panel p-4 ${c.completed ? 'opacity-75 bg-green-900/20' : ''}`}>
             <div className="flex items-center justify-between">

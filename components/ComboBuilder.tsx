@@ -146,7 +146,7 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
 
     // Remove undefined values to minimize payload
     const cleanData = Object.fromEntries(
-      Object.entries(comboData).filter(([_, value]) => value !== undefined)
+      Object.entries(comboData).filter(([, value]) => value !== undefined)
     );
 
     // Compress the data using base64 encoding
@@ -240,7 +240,7 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
       if (editingCombo) {
         // Update existing combo
         const updateData = { ...comboData };
-        delete (updateData as any).user_id; // Don't change ownership
+        delete (updateData as { user_id?: string }).user_id; // Don't change ownership
 
         const { error } = await supabase
           .from("combos")
@@ -254,7 +254,7 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
         showToast("Combo updated!");
       } else {
         // Create new combo
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from("combos")
           .insert(comboData);
 

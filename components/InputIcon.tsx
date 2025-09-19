@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 
 export type InputKey =
   | "1"|"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9"
@@ -107,7 +108,7 @@ export default function InputIcon({ k, size = 44, showBackground = true }: { k: 
       }}
     >
       {src ? (
-        <img src={src} alt={k} className="w-full h-full object-contain" />
+        <Image src={src} alt={k} width={buttonWidth} height={buttonHeight} className="w-full h-full object-contain" />
       ) : (
         <span className="text-sm font-bold">{k}</span>
       )}
