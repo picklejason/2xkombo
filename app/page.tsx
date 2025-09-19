@@ -42,6 +42,9 @@ function HomeContent() {
         }
       };
       loadCombo();
+    } else {
+      // Clear editing state when no edit parameter is present
+      setEditingCombo(null);
     }
   }, [searchParams, supabase]);
 

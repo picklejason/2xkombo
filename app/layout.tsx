@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Roboto } from "next/font/google";
 import { AuthProvider } from "@/lib/AuthContext";
 import { Navigation } from "@/components/Navigation";
+import { LogoLink } from "@/components/LogoLink";
 
 const roboto = Roboto({ subsets: ["latin"], weight: ["400","500","700"], variable: "--font-shapiro" });
 
@@ -23,9 +24,9 @@ export default function RootLayout({
         <AuthProvider>
           <header className="app-header">
             <nav className="app-nav" role="navigation" aria-label="Main navigation">
-              <Link href="/" className="app-nav__brand" aria-label="2XKOmbo homepage">
+              <LogoLink>
                 <span className="neon-title text-2xl font-bold tracking-wide">2XKOmbo</span>
-              </Link>
+              </LogoLink>
               <Navigation />
             </nav>
           </header>
