@@ -1,5 +1,33 @@
 @import "tailwindcss";
 
+/* Optimize critical path */
+html {
+  font-display: swap;
+}
+
+/* Prevent layout shift during font loading */
+body {
+  font-family: var(--font-shapiro, system-ui, -apple-system, sans-serif);
+}
+
+/* Reduce paint complexity */
+* {
+  box-sizing: border-box;
+}
+
+/* Optimize transforms for animations */
+.character-card,
+.brutal-btn,
+.arcade-btn {
+  will-change: transform;
+}
+
+/* Enable hardware acceleration for animations */
+.character-card__image,
+.input-button {
+  transform: translateZ(0);
+}
+
 :root {
   --background: #000000;
   --surface: #111111;

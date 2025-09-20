@@ -1,5 +1,6 @@
 "use client";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { findCharacter } from "@/lib/characters";
 import MyCombos from "@/components/MyCombos";
 import { useRouter } from "next/navigation";
@@ -41,12 +42,13 @@ export default function CharacterPage() {
           </div>
         </div>
         <div className="w-full md:w-auto">
-          <a
+          <Link
             href={`/?character=${character.id}`}
             className="brutal-btn brutal-btn--primary px-6 py-3 w-full md:w-auto text-center block"
+            prefetch={true}
           >
             CREATE COMBO
-          </a>
+          </Link>
         </div>
       </div>
 

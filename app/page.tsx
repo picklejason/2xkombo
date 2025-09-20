@@ -1,10 +1,20 @@
 "use client";
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import ComboBuilder from "@/components/ComboBuilder";
-import AuthToast from "@/components/AuthToast";
+import dynamic from "next/dynamic";
 import { createClient } from "@/utils/supabase/client";
 import { Combo } from "@/lib/types";
+
+// Dynamic imports for better code splitting
+const ComboBuilder = dynamic(() => import("@/components/ComboBuilder"), {
+  loading: () => <div className="text-white animate-pulse">Loading combo builder...</div>,
+  ssr: false
+});
+
+const AuthToast = dynamic(() => import("@/components/AuthToast"), {
+  loading: () => null,
+  ssr: false
+});
 
 function HomeContent() {
   const searchParams = useSearchParams();

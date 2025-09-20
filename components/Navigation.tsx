@@ -23,6 +23,7 @@ export function Navigation() {
           href="/my-combos"
           className="brutal-btn brutal-btn--secondary"
           aria-label="My Combos"
+          prefetch={true}
         >
           MY COMBOS
         </Link>

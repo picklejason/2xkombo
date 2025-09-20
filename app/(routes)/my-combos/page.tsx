@@ -38,6 +38,7 @@ export default function MyCombosPage() {
               href={`/c/${character.slug}`}
               className="character-grid__item"
               aria-label={`View ${character.name} combos`}
+              prefetch={true}
             >
               <CharacterCard 
                 name={character.name} 

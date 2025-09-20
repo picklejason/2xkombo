@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useState, useRef, memo, useMemo, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import ComboDisplay from "./ComboDisplay";
 import { createClient } from "@/utils/supabase/client";
@@ -7,14 +7,72 @@ import { useAuth } from "@/lib/AuthContext";
 import { useToast } from "@/lib/ToastContext";
 import { convertToNotation } from "@/lib/notation";
 import { Combo } from "@/lib/types";
+import { useCombos, updateComboInCache, removeComboFromCache } from "@/lib/hooks/useCombos";
+
+// Memoized ComboItem component to prevent unnecessary re-renders
+const ComboItem = memo(function ComboItem({ 
+  combo, 
+  onDropdownToggle, 
+  dropdownButtonRef 
+}: {
+  combo: Combo;
+  onDropdownToggle: (id: string) => void;
+  dropdownButtonRef: (el: HTMLButtonElement | null) => void;
+}) {
+  return (
+    <div className={`panel p-4 ${combo.completed ? 'opacity-75 bg-green-900/20' : ''}`}>
+      <div className="flex items-center justify-between">
+        <div className="flex-1 min-w-0">
+          {combo.name && (
+            <div className={`text-lg font-bold uppercase tracking-wide mb-2 ${combo.completed ? 'text-black' : 'text-neon-cyan'}`}>
+              {combo.name}
+              {combo.completed && (
+                <span className="ml-2 text-xs bg-green-600 text-white px-2 py-1 font-bold uppercase tracking-wide">LEARNED</span>
+              )}
+            </div>
+          )}
+          <div className="mb-3">
+            <ComboDisplay
+              inputs={combo.inputs}
+              notation="icons"
+              showBackground={false}
+              size={56}
+            />
+          </div>
+          <div className={`text-sm font-bold flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 ${combo.completed ? 'text-black' : 'text-foreground'}`}>
+            {combo.difficulty && (
+              <span className="uppercase tracking-wide">DIFFICULTY: {combo.difficulty?.toUpperCase()}</span>
+            )}
+            {combo.damage && (
+              <span className="uppercase tracking-wide">DAMAGE: {combo.damage}</span>
+            )}
+            {combo.tags && combo.tags.length > 0 && (
+              <span className="uppercase tracking-wide break-words">TAGS: {combo.tags?.join(", ").toUpperCase()}</span>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center justify-center ml-2 sm:ml-4">
+          <button
+            ref={dropdownButtonRef}
+            className="brutal-btn brutal-btn--secondary px-2 py-2 sm:px-3 sm:py-2 text-base sm:text-sm !min-w-[36px] !min-h-[36px] !w-[36px] !h-[36px] sm:!min-w-auto sm:!min-h-auto sm:!w-auto sm:!h-auto flex items-center justify-center"
+            onClick={() => onDropdownToggle(combo.id)}
+            aria-label="More options"
+            title="More options"
+          >
+            <span className="block sm:hidden text-center">⋮</span>
+            <span className="hidden sm:block text-center">⋯</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+});
 
 export default function MyCombos({ characterId, onEdit }: { characterId?: string; onEdit?: (combo: Combo) => void }) {
-  const { user, loading: authLoading } = useAuth();
+  const { user } = useAuth();
   const { showToast } = useToast();
   const supabase = createClient();
-  const [items, setItems] = useState<Combo[]>([]);
-  const [filteredItems, setFilteredItems] = useState<Combo[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { combos: items, isLoading: loading, error } = useCombos(characterId);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [dropdownPosition, setDropdownPosition] = useState<{top: number, left: number, maxHeight?: number} | null>(null);
   const dropdownButtonRefs = useRef<{[key: string]: HTMLButtonElement | null}>({});
@@ -25,52 +83,8 @@ export default function MyCombos({ characterId, onEdit }: { characterId?: string
   const [completedFilter, setCompletedFilter] = useState<'all' | 'learned' | 'not-learned'>('all');
   const [difficultyFilter, setDifficultyFilter] = useState<'all' | 'easy' | 'medium' | 'hard'>('all');
 
-  const load = useCallback(async () => {
-    if (authLoading) {
-      return; // Don't do anything while auth is loading
-    }
-
-    if (!user) {
-      // Clear combos when user is not authenticated
-      setItems([]);
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    console.log("Loading combos for user:", user.id);
-
-    let query = supabase
-      .from("combos")
-      .select("id, name, inputs, difficulty, damage, tags, character_id, completed")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
-
-    if (characterId) {
-      query = query.eq("character_id", characterId);
-      console.log("Filtering by character:", characterId);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error("Error loading combos:", error);
-      console.error("Full error object:", JSON.stringify(error, null, 2));
-      setLoading(false);
-      return;
-    }
-
-    console.log("Loaded combos:", data);
-    setItems((data as Combo[]) || []);
-    setLoading(false);
-  }, [user, authLoading, supabase, characterId]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  // Filter and sort items whenever filters or sort options change
-  useEffect(() => {
+  // Memoized filtering and sorting for better performance
+  const filteredItems = useMemo(() => {
     let filtered = [...items];
 
     // Apply tag/name filter
@@ -114,8 +128,6 @@ export default function MyCombos({ characterId, onEdit }: { characterId?: string
           break;
         case 'created':
         default:
-          // For created, we need to maintain the original order from the database
-          // Since items are already ordered by created_at desc, we can use array indices
           const aIndex = items.findIndex(item => item.id === a.id);
           const bIndex = items.findIndex(item => item.id === b.id);
           comparison = aIndex - bIndex;
@@ -125,7 +137,7 @@ export default function MyCombos({ characterId, onEdit }: { characterId?: string
       return sortOrder === 'asc' ? comparison : -comparison;
     });
 
-    setFilteredItems(filtered);
+    return filtered;
   }, [items, sortBy, sortOrder, tagFilter, completedFilter, difficultyFilter]);
 
   useEffect(() => {
@@ -264,35 +276,41 @@ export default function MyCombos({ characterId, onEdit }: { characterId?: string
     setOpenDropdown(null);
   }
 
-  async function remove(id: string) {
-    await supabase.from("combos").delete().eq("id", id);
-    setItems((a)=>a.filter((x)=>x.id!==id));
-    setOpenDropdown(null);
-  }
+  const remove = useCallback(async (id: string) => {
+    if (!user) return;
+    
+    try {
+      await supabase.from("combos").delete().eq("id", id);
+      removeComboFromCache(user.id, id, characterId);
+      setOpenDropdown(null);
+      showToast("Combo deleted", "success");
+    } catch (error) {
+      console.error("Error deleting combo:", error);
+      showToast("Failed to delete combo", "error");
+    }
+  }, [user, supabase, characterId, showToast]);
 
-  async function toggleCompleted(id: string, currentCompleted: boolean) {
+  const toggleCompleted = useCallback(async (id: string, currentCompleted: boolean) => {
+    if (!user) return;
+    
     const newCompleted = !currentCompleted;
 
-    const { error } = await supabase
-      .from("combos")
-      .update({ completed: newCompleted })
-      .eq("id", id);
+    try {
+      const { error } = await supabase
+        .from("combos")
+        .update({ completed: newCompleted })
+        .eq("id", id);
 
-    if (error) {
+      if (error) throw error;
+
+      updateComboInCache(user.id, id, { completed: newCompleted }, characterId);
+      showToast(newCompleted ? "Marked as learned!" : "Marked as not learned", "success");
+      setOpenDropdown(null);
+    } catch (error) {
       console.error("Error updating completed status:", error);
       showToast("Error updating completed status", "error");
-      return;
     }
-
-    setItems((items) =>
-      items.map((item) =>
-        item.id === id ? { ...item, completed: newCompleted } : item
-      )
-    );
-
-    showToast(newCompleted ? "Marked as learned!" : "Marked as not learned", "success");
-    setOpenDropdown(null);
-  }
+  }, [user, supabase, characterId, showToast]);
 
   function edit(combo: Combo) {
     if (onEdit) {
@@ -312,25 +330,25 @@ export default function MyCombos({ characterId, onEdit }: { characterId?: string
 
   return (
     <div className="space-y-3">
-      {authLoading && (
-        <div className="text-foreground/70 text-lg font-bold uppercase tracking-wide text-center">
-          LOADING...
-        </div>
-      )}
-
-      {!authLoading && !user && (
+      {!user && (
         <div className="text-foreground/70 text-lg font-bold uppercase tracking-wide text-center">
           Please log in to view your saved combos.
         </div>
       )}
 
-      {!authLoading && user && loading && (
+      {user && loading && (
         <div className="text-foreground/70 text-lg font-bold uppercase tracking-wide text-center">
           LOADING...
         </div>
       )}
 
-      {!authLoading && user && !loading && items.length > 0 && (
+      {user && error && (
+        <div className="text-red-400 text-lg font-bold uppercase tracking-wide text-center">
+          Failed to load combos. Please try again.
+        </div>
+      )}
+
+      {user && !loading && !error && items.length > 0 && (
         <div className="space-y-4">
           {/* Search, Filter and Sort Controls */}
           <div className="panel p-4">
@@ -427,63 +445,22 @@ export default function MyCombos({ characterId, onEdit }: { characterId?: string
         </div>
       )}
 
-      {!authLoading && user && !loading && items.length === 0 && (
+      {user && !loading && !error && items.length === 0 && (
         <div className="text-foreground/70 text-lg font-bold uppercase tracking-wide">NO SAVED COMBOS.</div>
       )}
 
-      {!authLoading && user && !loading && items.length > 0 && filteredItems.length === 0 && tagFilter.trim() && (
+      {user && !loading && !error && items.length > 0 && filteredItems.length === 0 && tagFilter.trim() && (
         <div className="text-foreground/70 text-lg font-bold uppercase tracking-wide">NO COMBOS MATCH YOUR SEARCH.</div>
       )}
 
-      {filteredItems.map((c) => {
-        return (
-          <div key={c.id} className={`panel p-4 ${c.completed ? 'opacity-75 bg-green-900/20' : ''}`}>
-            <div className="flex items-center justify-between">
-              <div className="flex-1 min-w-0">
-                {c.name && (
-                  <div className={`text-lg font-bold uppercase tracking-wide mb-2 ${c.completed ? 'text-black' : 'text-neon-cyan'}`}>
-                    {c.name}
-                    {c.completed && (
-                      <span className="ml-2 text-xs bg-green-600 text-white px-2 py-1 font-bold uppercase tracking-wide">LEARNED</span>
-                    )}
-                  </div>
-                )}
-                <div className="mb-3">
-                  <ComboDisplay
-                    inputs={c.inputs}
-                    notation="icons"
-                    showBackground={false}
-                    size={56}
-                  />
-                </div>
-                <div className={`text-sm font-bold flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 ${c.completed ? 'text-black' : 'text-foreground'}`}>
-                  {c.difficulty && (
-                    <span className="uppercase tracking-wide">DIFFICULTY: {c.difficulty?.toUpperCase()}</span>
-                  )}
-                  {c.damage && (
-                    <span className="uppercase tracking-wide">DAMAGE: {c.damage}</span>
-                  )}
-                  {c.tags && c.tags.length > 0 && (
-                    <span className="uppercase tracking-wide break-words">TAGS: {c.tags?.join(", ").toUpperCase()}</span>
-                  )}
-                </div>
-              </div>
-              <div className="flex items-center justify-center ml-2 sm:ml-4">
-                <button
-                  ref={(el) => { dropdownButtonRefs.current[c.id] = el; }}
-                  className="brutal-btn brutal-btn--secondary px-2 py-2 sm:px-3 sm:py-2 text-base sm:text-sm !min-w-[36px] !min-h-[36px] !w-[36px] !h-[36px] sm:!min-w-auto sm:!min-h-auto sm:!w-auto sm:!h-auto flex items-center justify-center"
-                  onClick={() => handleDropdownToggle(c.id)}
-                  aria-label="More options"
-                  title="More options"
-                >
-                  <span className="block sm:hidden text-center">⋮</span>
-                  <span className="hidden sm:block text-center">⋯</span>
-                </button>
-              </div>
-          </div>
-        </div>
-      );
-      })}
+      {filteredItems.map((combo) => (
+        <ComboItem
+          key={combo.id}
+          combo={combo}
+          onDropdownToggle={handleDropdownToggle}
+          dropdownButtonRef={(el) => { dropdownButtonRefs.current[combo.id] = el; }}
+        />
+      ))}
 
 
       {/* Portal Dropdown */}

@@ -6,8 +6,15 @@ import { ToastProvider } from "@/lib/ToastContext";
 import { Navigation } from "@/components/Navigation";
 import LogoLink from "../components/LogoLink";
 import { Footer } from "@/components/Footer";
+import { ImagePreloader } from "@/components/ImagePreloader";
 
-const roboto = Roboto({ subsets: ["latin"], weight: ["400","500","700"], variable: "--font-shapiro" });
+const roboto = Roboto({ 
+  subsets: ["latin"], 
+  weight: ["400","500","700"], 
+  variable: "--font-shapiro",
+  display: "swap",
+  preload: true
+});
 
 export const metadata: Metadata = {
   title: "2XKOMBO",
@@ -24,6 +31,7 @@ export default function RootLayout({
       <body className={`${roboto.variable} antialiased min-h-dvh bg-background text-foreground`}>
         <ToastProvider>
           <AuthProvider>
+            <ImagePreloader />
             <header className="app-header">
               <nav className="app-nav" role="navigation" aria-label="Main navigation">
                 <LogoLink>

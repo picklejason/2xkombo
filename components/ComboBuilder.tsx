@@ -10,6 +10,7 @@ import { useToast } from "@/lib/ToastContext";
 import { convertToNotation, parseNotation } from "@/lib/notation";
 import { Combo } from "@/lib/types";
 import { validateComboInputs, validateUserComboLimit } from "@/lib/comboLimits";
+import { invalidateCombosCache } from "@/lib/hooks/useCombos";
 
 const directionalInputs: InputKey[] = ["7","8","9","4","5","6","1","2","3"];
 const row1Inputs: InputKey[] = ["L","M","H","tag","air"];
@@ -294,12 +295,15 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
         console.log("Combo created successfully");
         showToast("Combo saved!", "success");
 
+        // Invalidate combos cache to ensure fresh data
+        invalidateCombosCache(user.id, meta.characterId);
+
         // Navigate to character page after saving
         const selectedCharacter = characters.find(char => char.id === meta.characterId);
         if (selectedCharacter) {
           setTimeout(() => {
             router.push(`/c/${selectedCharacter.slug}`);
-          }, 1000); // Wait 1 second to show the toast
+          }, 1000);
         }
       }
 
