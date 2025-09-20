@@ -77,6 +77,14 @@ function HomeContent() {
 
   return (
     <div className="space-y-6">
+      {!editingCombo && (
+        <div className="text-left space-y-4 mb-8">
+          <p className="text-lg text-gray-300 max-w-2xl font-bold">
+            Build, share, and save your 2XKO combos with our intuitive visual notation system.
+          </p>
+        </div>
+      )}
+
       {editingCombo && (
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">

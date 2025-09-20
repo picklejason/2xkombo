@@ -16,8 +16,32 @@ const roboto = Roboto({
 });
 
 export const metadata: Metadata = {
-  title: "2XKOMBO",
-  description: "Share and save 2XKO combos",
+  title: "2XKOMBO - Create, Share and Save 2XKO Combos",
+  description: "Create, share, and save combos for 2XKO. Build your combos with our visual notation system.",
+  keywords: "2XKO, combos, fighting game, Riot Games, combo notation, share combos",
+  authors: [{ name: "2XKOMBO" }],
+  openGraph: {
+    title: "2XKOMBO - Create, Share and Save 2XKO Combos",
+    description: "Create, share, and save combos for 2XKO. Build your combos with our visual notation system.",
+    url: "https://2xkombo.app",
+    siteName: "2XKOMBO",
+    images: [
+      {
+        url: "/assets/preview.png",
+        width: 1200,
+        height: 630,
+        alt: "2XKOMBO - Create, Share and Save 2XKO Combos",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "2XKOMBO - Create, Share and Save 2XKO Combos",
+    description: "Create, share, and save combos for 2XKO. Build your combos with our visual notation system.",
+    images: ["/assets/preview.png"],
+  },
 };
 
 export default function RootLayout({
