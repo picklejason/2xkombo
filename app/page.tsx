@@ -4,18 +4,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import ComboBuilder from "@/components/ComboBuilder";
 import AuthToast from "@/components/AuthToast";
 import { createClient } from "@/utils/supabase/client";
-import { InputKey } from "@/components/InputIcon";
-
-type Combo = {
-  id: string;
-  name: string;
-  inputs: InputKey[];
-  difficulty: string;
-  damage: string;
-  tags: string[];
-  character_id: string;
-  completed?: boolean;
-};
+import { Combo } from "@/lib/types";
 
 function HomeContent() {
   const searchParams = useSearchParams();

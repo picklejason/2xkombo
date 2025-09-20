@@ -3,19 +3,8 @@ import { useParams } from "next/navigation";
 import { findCharacter } from "@/lib/characters";
 import MyCombos from "@/components/MyCombos";
 import { useRouter } from "next/navigation";
-import { InputKey } from "@/components/InputIcon";
 import CharacterImage from "@/components/CharacterImage";
-
-type Combo = {
-  id: string;
-  name: string;
-  inputs: InputKey[];
-  difficulty: string;
-  damage: string;
-  tags: string[];
-  character_id: string;
-  completed?: boolean;
-};
+import { Combo } from "@/lib/types";
 
 export default function CharacterPage() {
   const params = useParams();

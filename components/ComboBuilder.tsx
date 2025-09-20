@@ -6,22 +6,14 @@ import ComboDisplay from "./ComboDisplay";
 import { createClient } from "@/utils/supabase/client";
 import { characters } from "@/lib/characters";
 import { useAuth } from "@/lib/AuthContext";
+import { useToast } from "@/lib/ToastContext";
+import { convertToNotation, parseNotation } from "@/lib/notation";
+import { Combo } from "@/lib/types";
 
 const directionalInputs: InputKey[] = ["7","8","9","4","5","6","1","2","3"];
 const row1Inputs: InputKey[] = ["L","M","H","tag","air"];
 const row2Inputs: InputKey[] = ["S1","S2","D","BD","delay"];
 const row3Inputs: InputKey[] = ["+",">","~","or","whiff"];
-
-type Combo = {
-  id: string;
-  name: string;
-  inputs: InputKey[];
-  difficulty: string;
-  damage: string;
-  tags: string[];
-  character_id: string;
-  completed?: boolean;
-};
 
 type Props = {
   characterId?: string;
@@ -31,12 +23,12 @@ type Props = {
 
 export default function ComboBuilder({ characterId, editingCombo, onSave }: Props) {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const router = useRouter();
   const [inputs, setInputs] = useState<InputKey[]>([]);
   const [notation, setNotation] = useState<"icons"|"numpad">("icons");
   const [saving, setSaving] = useState(false);
   const [meta, setMeta] = useState({ name: "", difficulty: "", damage: "", tags: "", characterId: characterId || "" });
-  const [toast, setToast] = useState<{message: string; visible: boolean}>({message: "", visible: false});
   const [importText, setImportText] = useState("");
   const [cameFromCharacterPage, setCameFromCharacterPage] = useState<string | null>(null);
   const supabase = createClient();
@@ -61,7 +53,7 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
       setMeta({
         name: editingCombo.name || "",
         difficulty: editingCombo.difficulty || "",
-        damage: editingCombo.damage || "",
+        damage: editingCombo.damage ? String(editingCombo.damage) : "",
         tags: (editingCombo.tags || []).join(", "),
         characterId: editingCombo.character_id || characterId || ""
       });
@@ -94,7 +86,7 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
           }));
         } catch (error) {
           console.error('Failed to parse shared combo data:', error);
-          showToast("Invalid share link format!");
+          showToast("Invalid share link format!", "error");
         }
       } else {
         // Fallback to old format for backward compatibility
@@ -125,21 +117,16 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
         }
       }
     }
-  }, [editingCombo, characterId]);
+  }, [editingCombo, characterId, showToast]);
 
   function add(k: InputKey) { setInputs((a)=>[...a,k]); }
   function undo() { setInputs((a)=>a.slice(0,-1)); }
   function reset() { setInputs([]); }
 
-  function showToast(message: string) {
-    setToast({message, visible: true});
-    setTimeout(() => setToast({message: "", visible: false}), 3000);
-  }
-
   function copyNotation() {
     const numpadText = convertToNotation(inputs);
     navigator.clipboard.writeText(numpadText);
-    showToast(`Copied: ${numpadText}`);
+    showToast(`Copied: ${numpadText}`, "success");
   }
 
   function shareCombo() {
@@ -147,7 +134,7 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
       inputs: inputs.length > 0 ? inputs : undefined,
       name: meta.name || undefined,
       difficulty: meta.difficulty || undefined,
-      damage: meta.damage || undefined,
+      damage: meta.damage ? Number(meta.damage) || undefined : undefined,
       tags: meta.tags || undefined,
       characterId: meta.characterId || undefined
     };
@@ -165,7 +152,7 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
     shareUrl.searchParams.set('c', encodedData);
 
     navigator.clipboard.writeText(shareUrl.toString());
-    showToast("Share link copied to clipboard!");
+    showToast("Share link copied to clipboard!", "success");
   }
 
   function importNotation() {
@@ -173,9 +160,9 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
       const parsed = parseNotation(importText);
       setInputs(parsed);
       setImportText("");
-      showToast("Combo imported successfully!");
+      showToast("Combo imported successfully!", "success");
     } catch {
-      showToast("Invalid notation format!");
+      showToast("Invalid notation format!", "error");
     }
   }
 
@@ -183,7 +170,7 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
     try {
       const comboElement = document.getElementById('combo-display');
       if (!comboElement) {
-        alert("Combo display not found");
+        showToast("Combo display not found", "error");
         return;
       }
 
@@ -209,7 +196,7 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
 
     } catch (error) {
       console.error('Save as image failed:', error);
-      showToast("Failed to save image. Please try again.");
+      showToast("Failed to save image. Please try again.", "error");
     }
   }
 
@@ -217,17 +204,17 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
     setSaving(true);
     try {
       if (!user) {
-        showToast("Please log in to save combos");
+        showToast("Please log in to save combos", "error");
         setSaving(false);
         return;
       }
       if (!meta.characterId) {
-        showToast("Please select a champion");
+        showToast("Please select a champion", "error");
         setSaving(false);
         return;
       }
       if (inputs.length === 0) {
-        showToast("Please add some inputs to the combo");
+        showToast("Please add some inputs to the combo", "error");
         setSaving(false);
         return;
       }
@@ -240,7 +227,7 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
         inputs,
         name: meta.name || null,
         difficulty: meta.difficulty || null,
-        damage: meta.damage || null,
+        damage: meta.damage ? Number(meta.damage) || null : null,
         tags: meta.tags ? meta.tags.split(/[,\s]+/).filter(Boolean) : [],
       };
 
@@ -260,7 +247,7 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
           console.error("Update error:", error);
           throw error;
         }
-        showToast("Combo updated!");
+        showToast("Combo updated!", "success");
       } else {
         // Create new combo
         const { error } = await supabase
@@ -273,7 +260,7 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
         }
 
         console.log("Combo created successfully");
-        showToast("Combo saved!");
+        showToast("Combo saved!", "success");
 
         // Navigate to character page after saving
         const selectedCharacter = characters.find(char => char.id === meta.characterId);
@@ -288,7 +275,7 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
       if (onSave) onSave();
     } catch (e: unknown) {
       console.error("Save failed:", e);
-      showToast(e instanceof Error ? e.message : "Failed to save");
+      showToast(e instanceof Error ? e.message : "Failed to save", "error");
     } finally {
       setSaving(false);
     }
@@ -506,318 +493,7 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
           </div>
         </div>
 
-        {/* Toast Notification */}
-        {toast.visible && (
-          <div className="fixed bottom-4 right-4 bg-gray-800 text-white px-6 py-3 border-4 border-brutal-border box-shadow-brutal z-50">
-            <span className="text-sm font-bold uppercase tracking-wide">{toast.message}</span>
-          </div>
-        )}
       </div>
     </div>
   );
 }
-
-function parseNotation(notation: string): InputKey[] {
-  const result: InputKey[] = [];
-  const tokens = notation.trim().split(/\s+/);
-
-  for (let i = 0; i < tokens.length; i++) {
-    const token = tokens[i];
-    const nextToken = tokens[i + 1];
-
-    // Handle directional + jc combinations (e.g., "7 jc", "9 jc")
-    if ((token === "7" || token === "9") && (nextToken && nextToken.toLowerCase() === "jc")) {
-      result.push(`${token}jc` as InputKey);
-      i++; // Skip the next token since we processed it
-      continue;
-    }
-
-    if (token.includes('~')) {
-      // Handle X~Y notation
-      const [x, y] = token.split('~');
-      result.push(...parseToken(x));
-      result.push("~");
-      result.push(...parseToken(y));
-    } else if (token.includes('/')) {
-      // Handle X/Y notation (or)
-      const [x, y] = token.split('/');
-      result.push(...parseToken(x));
-      result.push("or");
-      result.push(...parseToken(y));
-    } else if (token.startsWith('j.') || token.startsWith('J.')) {
-      // Handle j.X or J.X notation
-      result.push("air");
-      result.push(...parseToken(token.substring(2)));
-    } else if (token.startsWith('dl.') || token.startsWith('DL.') || token.startsWith('d.') || token.startsWith('D.')) {
-      // Handle dl.X, DL.X, d.X, or D.X notation
-      result.push("delay");
-      const prefixLength = token.startsWith('dl.') || token.startsWith('DL.') ? 3 : 2;
-      result.push(...parseToken(token.substring(prefixLength)));
-    } else if (token.startsWith('w.') || token.startsWith('W.')) {
-      // Handle w.X or W.X notation
-      result.push("whiff");
-      result.push(...parseToken(token.substring(2)));
-    } else if (token.startsWith('[') && token.endsWith(']')) {
-      // Handle [X] notation
-      result.push("hold");
-      result.push(...parseToken(token.slice(1, -1)));
-    } else if (token === '+' || token === '>' || token === 'OR' || token === 'or' || token === '/') {
-      // Handle connectors
-      result.push(reverseNotation(token));
-    } else if (token.toLowerCase() === 'jc') {
-      // Handle standalone "jc" - keep as "jc" for numpad display but treat as directional for icons
-      result.push("jc");
-    } else {
-      // Handle complex tokens like 2H, 6H, 9, etc.
-      result.push(...parseToken(token));
-    }
-  }
-
-  return result;
-}
-
-function parseToken(token: string): InputKey[] {
-  // Handle special cases first
-  if (token === "66") {
-    return ["D"]; // Dash button
-  }
-  if (token === "44") {
-    return ["BD"]; // Backdash button
-  }
-
-  // Handle standalone 7 or 9 as jump cancels
-  if (token === "7") {
-    return ["7jc"];
-  }
-  if (token === "9") {
-    return ["9jc"];
-  }
-
-  // Handle jump cancel patterns for combined tokens (e.g., "7jc", "9jc")
-  if (token.toLowerCase().endsWith("jc")) {
-    const direction = token.replace(/jc/i, "");
-    if (direction === "7") {
-      return ["7jc"];
-    } else if (direction === "9") {
-      return ["9jc"];
-    }
-    // Don't handle standalone "jc" here - it's handled in parseNotation
-  }
-
-  // Handle directional + button combinations
-  if (token.length > 1) {
-    const firstChar = token[0];
-    const rest = token.substring(1);
-
-    // Check if first character is a direction (1-9)
-    if (/[1-9]/.test(firstChar)) {
-      // Special case: 5X (neutral) should just be X
-      if (firstChar === "5") {
-        const button = reverseNotation(rest);
-        return [button];
-      }
-
-      const direction = reverseNotation(firstChar);
-      const button = reverseNotation(rest);
-      return [direction, button];
-    }
-  }
-
-  // Single token
-  return [reverseNotation(token)];
-}
-
-function reverseNotation(notation: string): InputKey {
-  const lowerNotation = notation.toLowerCase();
-  const map: Record<string, InputKey> = {
-    "1": "1", "2": "2", "3": "3", "4": "4", "5": "5", "6": "6", "7": "7", "8": "8", "9": "9",
-    "7jc": "7jc", "9jc": "9jc",
-    "l": "L", "m": "M", "h": "H", "s1": "S1", "s2": "S2",
-    "+": "+", "66": "D", "44": "BD", ">": ">", "tag": "tag", "or": "or", "/": "or", "~": "~",
-    "dl": "delay", "d": "delay"
-  };
-  return map[lowerNotation] || notation as InputKey;
-}
-
-function convertToNotation(inputs: InputKey[]): string {
-  const result: string[] = [];
-  let i = 0;
-
-  while (i < inputs.length) {
-    const current = inputs[i];
-    const next = inputs[i + 1];
-    const prev = inputs[i - 1];
-
-    if (current === "hold" && next) {
-      // Skip hold, it will be handled by the next button
-      i++;
-      continue;
-    }
-
-    if (current === "air" && next) {
-      // Air + next button becomes j.BUTTON
-      if (isDirectional(next) && inputs[i + 2]) {
-        // Air + direction + button (e.g., air, 6, H)
-        const dirNotation = getBasicNotation(next);
-        const btnNotation = getBasicNotation(inputs[i + 2]);
-        if (next === "5") {
-          result.push(`j.${btnNotation}`);
-        } else {
-          result.push(`j.${dirNotation}${btnNotation}`);
-        }
-        i += 3; // Skip air, direction, and button
-      } else {
-        // Air + button directly
-        const nextNotation = getBasicNotation(next);
-        result.push(`j.${nextNotation}`);
-        i += 2; // Skip air and button
-      }
-      continue;
-    }
-
-    if (current === "delay" && next) {
-      // Delay + next button becomes dl.BUTTON
-      if (isDirectional(next) && inputs[i + 2]) {
-        // Delay + direction + button (e.g., delay, 6, H)
-        const dirNotation = getBasicNotation(next);
-        const btnNotation = getBasicNotation(inputs[i + 2]);
-        if (next === "5") {
-          result.push(`dl.${btnNotation}`);
-        } else {
-          result.push(`dl.${dirNotation}${btnNotation}`);
-        }
-        i += 3; // Skip delay, direction, and button
-      } else {
-        // Delay + button directly
-        const nextNotation = getBasicNotation(next);
-        result.push(`dl.${nextNotation}`);
-        i += 2; // Skip delay and button
-      }
-      continue;
-    }
-
-    if (current === "whiff" && next) {
-      // Whiff + next button becomes w.BUTTON
-      if (isDirectional(next) && inputs[i + 2]) {
-        // Whiff + direction + button (e.g., whiff, 6, H)
-        const dirNotation = getBasicNotation(next);
-        const btnNotation = getBasicNotation(inputs[i + 2]);
-        if (next === "5") {
-          result.push(`w.${btnNotation}`);
-        } else {
-          result.push(`w.${dirNotation}${btnNotation}`);
-        }
-        i += 3; // Skip whiff, direction, and button
-      } else {
-        // Whiff + button directly
-        const nextNotation = getBasicNotation(next);
-        result.push(`w.${nextNotation}`);
-        i += 2; // Skip whiff and button
-      }
-      continue;
-    }
-
-    if (current === "~") {
-      // Handle X~Y notation
-      const nextElement = inputs[i + 1];
-      const nextNext = inputs[i + 2];
-
-      // Build the Y part
-      let yPart = "";
-      if (isDirectional(nextElement) && nextNext && !isDirectional(nextNext)) {
-        if (nextElement === "5") {
-          yPart = getBasicNotation(nextNext);
-        } else {
-          yPart = `${getBasicNotation(nextElement)}${getBasicNotation(nextNext)}`;
-        }
-        i += 3; // Skip ~, direction, button
-      } else {
-        yPart = getBasicNotation(nextElement);
-        i += 2; // Skip ~ and next element
-      }
-
-      // Get the last added result as X part
-      const xPart = result[result.length - 1];
-      result[result.length - 1] = `${xPart}~${yPart}`;
-      continue;
-    }
-
-    if (prev === "hold") {
-      // Previous was hold, so wrap this button in brackets
-      const notation = getBasicNotation(current);
-      result.push(`[${notation}]`);
-      i++;
-      continue;
-    }
-
-    if (prev === "air" || prev === "delay" || prev === "whiff") {
-      // Skip this since it was handled in air/delay/whiff logic
-      i++;
-      continue;
-    }
-
-    // Handle directional + button combinations
-    if (isDirectional(current) && next && !isDirectional(next) &&
-        next !== "+" && next !== "T" && next !== ">" && next !== "or" &&
-        next !== "~" && next !== "hold" && next !== "air" && next !== "delay" && next !== "whiff") {
-
-      const dirNotation = getBasicNotation(current);
-      const btnNotation = getBasicNotation(next);
-
-      // Special case for neutral (5)
-      if (current === "5") {
-        result.push(btnNotation);
-      } else {
-        result.push(`${dirNotation}${btnNotation}`);
-      }
-      i += 2; // Skip direction and button
-      continue;
-    }
-
-    // Regular notation
-    result.push(getBasicNotation(current));
-    i++;
-  }
-
-  return result.join("").replace(/\s{2,}/g, ' ').trim();
-}
-
-function isDirectional(k: InputKey): boolean {
-  return ["1", "2", "3", "4", "5", "6", "7", "8", "9", "7jc", "9jc", "jc"].includes(k);
-}
-
-function getBasicNotation(k: InputKey): string {
-  switch(k){
-    case "1": return "1";
-    case "2": return "2";
-    case "3": return "3";
-    case "4": return "4";
-    case "5": return "5";
-    case "6": return "6";
-    case "7": return "7";
-    case "8": return "8";
-    case "9": return "9";
-    case "7jc": return "7jc";
-    case "9jc": return "9jc";
-    case "jc": return "jc";
-    case "L": return "L";
-    case "M": return "M";
-    case "H": return "H";
-    case "S1": return "S1";
-    case "S2": return "S2";
-    case "+": return " + ";
-    case "D": return "66";
-    case "BD": return "44";
-    case ">": return " > ";
-    case "tag": return "TAG";
-    case "or": return "/";
-    case "air": return "j.";
-    case "delay": return "d.";
-    case "whiff": return "w.";
-    case "hold": return "[HOLD]";
-    case "~": return "~";
-    default: return k.toUpperCase(); // Everything else uppercase by default
-  }
-}
-
-
