@@ -10,10 +10,13 @@ export default function DiscordButton() {
   async function signInWithDiscord() {
     setLoading(true);
 
+    // Use environment variable for production, fallback to window.location.origin for dev
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'discord',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/?message=Welcome! Successfully signed in with Discord')}`,
+        redirectTo: `${siteUrl}/auth/callback?next=${encodeURIComponent('/?message=Welcome! Successfully signed in with Discord')}`,
       },
     });
 
