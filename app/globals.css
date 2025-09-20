@@ -7,7 +7,7 @@ html {
 
 /* Prevent layout shift during font loading */
 body {
-  font-family: var(--font-shapiro, system-ui, -apple-system, sans-serif);
+  font-family: var(--font-roboto, system-ui, -apple-system, sans-serif);
 }
 
 /* Reduce paint complexity */
@@ -52,7 +52,7 @@ body {
   --color-brutal-yellow: var(--brutal-yellow);
   --color-brutal-orange: var(--brutal-orange);
   --color-brutal-red: var(--brutal-red);
-  --font-sans: var(--font-shapiro, ui-sans-serif, system-ui);
+  --font-sans: var(--font-roboto, ui-sans-serif, system-ui);
 }
 
 html, body {
@@ -62,8 +62,8 @@ html, body {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-shapiro, ui-sans-serif, system-ui);
-  font-weight: 600;
+  font-family: var(--font-roboto, ui-sans-serif, system-ui);
+  font-weight: 400;
 }
 
 /* NEOBRUTALISM TYPOGRAPHY */
@@ -102,7 +102,7 @@ body {
   border: 4px solid var(--brutal-border);
   box-shadow: 6px 6px 0 var(--brutal-shadow);
   color: var(--foreground);
-  font-weight: 900;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   padding: 12px 24px;
@@ -150,7 +150,7 @@ body {
   border: 4px solid var(--brutal-border);
   box-shadow: 6px 6px 0 var(--brutal-shadow);
   color: var(--foreground);
-  font-weight: 900;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   padding: 12px 24px;
@@ -534,7 +534,7 @@ select, input, textarea {
   background: var(--background);
   border: 4px solid var(--brutal-border);
   color: var(--foreground);
-  font-weight: 900;
+  font-weight: 400;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 0.75rem;

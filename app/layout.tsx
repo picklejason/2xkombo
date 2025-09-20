@@ -8,12 +8,11 @@ import LogoLink from "../components/LogoLink";
 import { Footer } from "@/components/Footer";
 import { ImagePreloader } from "@/components/ImagePreloader";
 
-const roboto = Roboto({ 
-  subsets: ["latin"], 
-  weight: ["400","500","700"], 
-  variable: "--font-shapiro",
+const roboto = Roboto({
+  subsets: ["latin"],
+  weight: ["400","500","700","900"],
+  variable: "--font-roboto",
   display: "swap",
-  preload: true
 });
 
 export const metadata: Metadata = {
@@ -28,7 +27,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${roboto.variable} antialiased min-h-dvh bg-background text-foreground`}>
+      <body className={`${roboto.variable} font-sans antialiased min-h-dvh bg-background text-foreground`}>
         <ToastProvider>
           <AuthProvider>
             <ImagePreloader />

@@ -10,6 +10,7 @@ const COMBO_DISPLAY_SIZES = {
   whiff: { width: 44, height: 40 },
   "+": { width: 32, height: 40 },
   ">": { width: 36, height: 40 },
+  ",": { width: 16, height: 40 },
 } as const;
 
 // Text labels for special inputs
@@ -20,6 +21,7 @@ const INPUT_LABELS = {
   delay: "DELAY",
   whiff: "WHIFF",
   "~": "~",
+  ",": ",",
 } as const;
 
 export type InputKey =
@@ -41,7 +43,8 @@ export type InputKey =
   | "delay"
   | "whiff"
   | "or"
-  | "~";
+  | "~"
+  | ",";
 
 const keyToAsset: Record<string, string> = {
   1: "/assets/1.svg",
@@ -81,9 +84,13 @@ function isTextBasedInput(key: InputKey): boolean {
   return key in INPUT_LABELS || (!keyToAsset[key] && key !== "tag");
 }
 
-export default function InputIcon({ k, size = 44, showBackground = true }: { k: InputKey; size?: number; showBackground?: boolean }) {
+export default function InputIcon({ k, size = 44, showBackground = true, isHeld = false }: { k: InputKey; size?: number; showBackground?: boolean; isHeld?: boolean }) {
   const src = keyToAsset[k];
   const color = chipColor(k);
+
+  // Check if this button has its own colored background (the ones that should show HOLD overlay)
+  const iconsWithBackgrounds = ["L", "M", "H", "S1", "S2", "tag"];
+  const shouldShowHoldOverlay = isHeld && iconsWithBackgrounds.includes(k);
 
   // Handle special cases
   if (k === "5") {
@@ -123,13 +130,26 @@ export default function InputIcon({ k, size = 44, showBackground = true }: { k: 
 
   return (
     <span
-      className={`inline-flex items-center justify-center transition ${showBackground ? color.bg : ''}`}
+      className={`inline-flex items-center justify-center transition ${showBackground ? color.bg : ''} relative`}
       style={{ width, height }}
     >
       {src ? (
         <Image src={src} alt={k} width={imageWidth} height={imageHeight} className="object-contain" />
       ) : (
         <span className="text-sm font-bold">{k}</span>
+      )}
+      {shouldShowHoldOverlay && (
+        <span
+          className="absolute -top-3 left-1/2 transform -translate-x-1/2 text-white text-xs font-black text-center whitespace-nowrap"
+          style={{
+            fontSize: '11px',
+            fontFamily: 'var(--font-roboto)',
+            fontWeight: '900',
+            textShadow: '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000'
+          }}
+        >
+          (HOLD)
+        </span>
       )}
     </span>
   );
@@ -144,6 +164,11 @@ function chipColor(k: string): { bg: string } {
 
   // Buttons that need backgrounds
   const backgroundButtons = ["+", ">", "~"];
+
+  // Comma gets no background
+  if (k === ",") {
+    return { bg: "bg-transparent" };
+  }
 
   if (iconsWithBackgrounds.includes(k) || noBackgroundButtons.includes(k)) {
     return { bg: "bg-transparent" };

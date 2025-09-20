@@ -398,13 +398,13 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
                 <input
                   value={meta.name}
                   onChange={(e)=>setMeta({...meta, name:e.target.value})}
-                  className="w-full bg-background border-4 border-brutal-border p-3 text-sm font-bold uppercase tracking-wide focus:outline-none focus:border-neon-cyan"
+                  className="w-full bg-background border-4 border-brutal-border p-3 text-sm font-normal uppercase tracking-wide focus:outline-none focus:border-neon-cyan"
                   placeholder="NAME"
                 />
                 <select
                   value={meta.difficulty}
                   onChange={(e)=>setMeta({...meta, difficulty:e.target.value})}
-                  className="w-full bg-background border-4 border-brutal-border p-3 text-sm font-bold uppercase tracking-wide focus:outline-none focus:border-neon-cyan"
+                  className="w-full bg-background border-4 border-brutal-border p-3 text-sm font-normal uppercase tracking-wide focus:outline-none focus:border-neon-cyan"
                 >
                   <option value="">DIFFICULTY</option>
                   <option value="Easy">EASY</option>
@@ -414,14 +414,14 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
                 <input
                   value={meta.damage}
                   onChange={(e)=>setMeta({...meta, damage:e.target.value})}
-                  className="w-full bg-background border-4 border-brutal-border p-3 text-sm font-bold uppercase tracking-wide focus:outline-none focus:border-neon-cyan"
+                  className="w-full bg-background border-4 border-brutal-border p-3 text-sm font-normal uppercase tracking-wide focus:outline-none focus:border-neon-cyan"
                   placeholder="DAMAGE"
                 />
                 {user && (
                   <select
                     value={meta.characterId}
                     onChange={(e)=>setMeta({...meta, characterId:e.target.value})}
-                    className="w-full bg-background border-4 border-brutal-border p-3 text-sm font-bold uppercase tracking-wide focus:outline-none focus:border-neon-cyan"
+                    className="w-full bg-background border-4 border-brutal-border p-3 text-sm font-normal uppercase tracking-wide focus:outline-none focus:border-neon-cyan"
                   >
                     <option value="">SELECT CHAMPION</option>
                     {characters.map(char => (
@@ -432,7 +432,7 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
                 <input
                   value={meta.tags}
                   onChange={(e)=>setMeta({...meta, tags:e.target.value})}
-                  className="w-full bg-background border-4 border-brutal-border p-3 text-sm font-bold uppercase tracking-wide focus:outline-none focus:border-neon-cyan"
+                  className="w-full bg-background border-4 border-brutal-border p-3 text-sm font-normal uppercase tracking-wide focus:outline-none focus:border-neon-cyan"
                   placeholder="TAGS"
                 />
               </div>
@@ -475,7 +475,7 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
             <input
               value={importText}
               onChange={(e)=>setImportText(e.target.value)}
-              className="flex-1 bg-background border-4 border-brutal-border p-3 text-lg font-bold tracking-wide focus:outline-none focus:border-neon-cyan"
+              className="flex-1 bg-background border-4 border-brutal-border p-3 text-lg font-normal tracking-wide focus:outline-none focus:border-neon-cyan"
               placeholder="ENTER NUMPAD NOTATION TO IMPORT..."
               style={{ textTransform: 'none' }}
             />

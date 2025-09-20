@@ -9,7 +9,7 @@ export function Navigation() {
   if (loading) {
     return (
       <div className="app-nav__actions">
-        <div className="text-foreground/50 text-lg font-bold uppercase tracking-wide">
+        <div className="text-foreground/50 text-lg font-normal uppercase tracking-wide">
           LOADING...
         </div>
       </div>

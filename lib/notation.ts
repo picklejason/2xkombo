@@ -16,6 +16,28 @@ export function convertToNotation(inputs: InputKey[]): string {
     }
 
     if (current === "air" && next) {
+      // Handle air + hold combinations first
+      if (next === "hold" && inputs[i + 2]) {
+        const afterHold = inputs[i + 2];
+        if (isDirectional(afterHold) && inputs[i + 3]) {
+          // Air + hold + direction + button (e.g., air, hold, 6, S1)
+          const dirNotation = getBasicNotation(afterHold);
+          const btnNotation = getBasicNotation(inputs[i + 3]);
+          if (afterHold === "5") {
+            result.push(`j[${btnNotation}]`);
+          } else {
+            result.push(`j[${dirNotation}${btnNotation}]`);
+          }
+          i += 4; // Skip air, hold, direction, and button
+        } else {
+          // Air + hold + button directly (e.g., air, hold, S1)
+          const btnNotation = getBasicNotation(afterHold);
+          result.push(`j[${btnNotation}]`);
+          i += 3; // Skip air, hold, and button
+        }
+        continue;
+      }
+
       // Air + next button becomes j.BUTTON
       if (isDirectional(next) && inputs[i + 2]) {
         // Air + direction + button (e.g., air, 6, H)
@@ -117,6 +139,22 @@ export function convertToNotation(inputs: InputKey[]): string {
       continue;
     }
 
+    // Handle directional + hold + button combinations
+    if (isDirectional(current) && next === "hold" && inputs[i + 2]) {
+      const afterHold = inputs[i + 2];
+      const dirNotation = getBasicNotation(current);
+      const btnNotation = getBasicNotation(afterHold);
+
+      // Special case for neutral (5)
+      if (current === "5") {
+        result.push(`[${btnNotation}]`);
+      } else {
+        result.push(`${dirNotation}[${btnNotation}]`);
+      }
+      i += 3; // Skip direction, hold, and button
+      continue;
+    }
+
     // Handle directional + button combinations
     if (isDirectional(current) && next && !isDirectional(next) &&
         next !== "+" && next !== "T" && next !== ">" && next !== "or" &&
@@ -159,21 +197,33 @@ export function parseNotation(notation: string): InputKey[] {
     }
 
     if (token.includes('~')) {
-      // Handle X~Y notation
-      const [x, y] = token.split('~');
-      result.push(...parseToken(x));
-      result.push("~");
-      result.push(...parseToken(y));
+      // Handle X~Y~Z... notation (multiple tildes)
+      const parts = token.split('~');
+      for (let j = 0; j < parts.length; j++) {
+        if (j > 0) {
+          result.push("~");
+        }
+        result.push(...parseToken(parts[j]));
+      }
     } else if (token.includes('/')) {
       // Handle X/Y notation (or)
       const [x, y] = token.split('/');
       result.push(...parseToken(x));
       result.push("or");
       result.push(...parseToken(y));
+    } else if (token.startsWith('j[') && token.endsWith(']')) {
+      // Handle j[X] notation (air + hold)
+      result.push("air");
+      result.push("hold");
+      result.push(...parseToken(token.slice(2, -1)));
     } else if (token.startsWith('j.') || token.startsWith('J.')) {
       // Handle j.X or J.X notation
       result.push("air");
       result.push(...parseToken(token.substring(2)));
+    } else if (token.startsWith('j') || token.startsWith('J')) {
+      // Handle jX notation (without dot)
+      result.push("air");
+      result.push(...parseToken(token.substring(1)));
     } else if (token.startsWith('dl.') || token.startsWith('DL.') || token.startsWith('d.') || token.startsWith('D.')) {
       // Handle dl.X, DL.X, d.X, or D.X notation
       result.push("delay");
@@ -187,7 +237,18 @@ export function parseNotation(notation: string): InputKey[] {
       // Handle [X] notation
       result.push("hold");
       result.push(...parseToken(token.slice(1, -1)));
-    } else if (token === '+' || token === '>' || token === 'OR' || token === 'or' || token === '/') {
+    } else if (token.includes('[') && token.endsWith(']')) {
+      // Handle Y[X] notation (direction + hold)
+      const bracketIndex = token.indexOf('[');
+      const beforeBracket = token.substring(0, bracketIndex);
+      const insideBracket = token.slice(bracketIndex + 1, -1);
+
+      if (beforeBracket) {
+        result.push(...parseToken(beforeBracket));
+      }
+      result.push("hold");
+      result.push(...parseToken(insideBracket));
+    } else if (token === '+' || token === '>' || token === 'OR' || token === 'or' || token === '/' || token === ',') {
       // Handle connectors
       result.push(reverseNotation(token));
     } else if (token.toLowerCase() === 'jc') {
@@ -203,6 +264,12 @@ export function parseNotation(notation: string): InputKey[] {
 }
 
 function parseToken(token: string): InputKey[] {
+  // Handle tokens ending with comma (e.g., "M,", "S2,")
+  if (token.endsWith(',')) {
+    const baseToken = token.slice(0, -1);
+    return [...parseToken(baseToken), ","];
+  }
+
   // Handle special cases first
   if (token === "66") {
     return ["D"]; // Dash button
@@ -260,7 +327,7 @@ function reverseNotation(notation: string): InputKey {
     "7jc": "7jc", "9jc": "9jc",
     "l": "L", "m": "M", "h": "H", "s1": "S1", "s2": "S2",
     "+": "+", "66": "D", "44": "BD", ">": ">", "tag": "tag", "or": "or", "/": "or", "~": "~",
-    "dl": "delay", "d": "delay"
+    "dl": "delay", "d": "delay", ",": ","
   };
   return map[lowerNotation] || notation as InputKey;
 }
