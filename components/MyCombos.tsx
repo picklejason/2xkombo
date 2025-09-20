@@ -8,6 +8,7 @@ import { useToast } from "@/lib/ToastContext";
 import { convertToNotation } from "@/lib/notation";
 import { Combo } from "@/lib/types";
 import { useCombos, updateComboInCache, removeComboFromCache } from "@/lib/hooks/useCombos";
+import { generateShareUrl } from "@/lib/urlUtils";
 
 // Memoized ComboItem component to prevent unnecessary re-renders
 const ComboItem = memo(function ComboItem({ 
@@ -259,19 +260,8 @@ export default function MyCombos({ characterId, onEdit }: { characterId?: string
       characterId: combo.character_id || undefined
     };
 
-    // Remove undefined values to minimize payload
-    const cleanData = Object.fromEntries(
-      Object.entries(comboData).filter(([, value]) => value !== undefined)
-    );
-
-    // Compress the data using base64 encoding
-    const jsonString = JSON.stringify(cleanData);
-    const encodedData = btoa(unescape(encodeURIComponent(jsonString)));
-
-    const shareUrl = new URL(window.location.origin);
-    shareUrl.searchParams.set('c', encodedData);
-
-    navigator.clipboard.writeText(shareUrl.toString());
+    const shareUrl = generateShareUrl(comboData);
+    navigator.clipboard.writeText(shareUrl);
     showToast("Share link copied to clipboard!", "success");
     setOpenDropdown(null);
   }

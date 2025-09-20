@@ -11,6 +11,7 @@ import { convertToNotation, parseNotation } from "@/lib/notation";
 import { Combo } from "@/lib/types";
 import { validateComboInputs, validateUserComboLimit } from "@/lib/comboLimits";
 import { invalidateCombosCache } from "@/lib/hooks/useCombos";
+import { generateShareUrl, decodeShareUrl } from "@/lib/urlUtils";
 
 const directionalInputs: InputKey[] = ["7","8","9","4","5","6","1","2","3"];
 const row1Inputs: InputKey[] = ["L","M","H","tag","air"];
@@ -67,13 +68,11 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
       const characterParam = urlParams.get('character');
       setCameFromCharacterPage(characterParam);
 
-      // Check for new compressed format first
-      const compressedData = urlParams.get('c');
-      if (compressedData) {
-        try {
-          const jsonString = decodeURIComponent(escape(atob(compressedData)));
-          const comboData = JSON.parse(jsonString);
-
+      // Check for shared combo data
+      const shareData = urlParams.get('s');
+      if (shareData) {
+        const comboData = decodeShareUrl(shareData);
+        if (comboData) {
           if (comboData.inputs) {
             setInputs(comboData.inputs);
           }
@@ -82,40 +81,12 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
             ...prev,
             name: comboData.name || prev.name,
             difficulty: comboData.difficulty || prev.difficulty,
-            damage: comboData.damage || prev.damage,
+            damage: comboData.damage ? String(comboData.damage) : prev.damage,
             tags: comboData.tags || prev.tags,
             characterId: comboData.characterId || prev.characterId
           }));
-        } catch (error) {
-          console.error('Failed to parse shared combo data:', error);
+        } else {
           showToast("Invalid share link format!", "error");
-        }
-      } else {
-        // Fallback to old format for backward compatibility
-        const sharedInputs = urlParams.get('inputs');
-        if (sharedInputs) {
-          try {
-            const parsedInputs = JSON.parse(sharedInputs);
-            setInputs(parsedInputs);
-          } catch (error) {
-            console.error('Failed to parse shared inputs:', error);
-          }
-        }
-
-        const sharedName = urlParams.get('name');
-        const sharedDifficulty = urlParams.get('difficulty');
-        const sharedTags = urlParams.get('tags');
-
-        const sharedDamage = urlParams.get('damage');
-
-        if (sharedName || sharedDifficulty || sharedDamage || sharedTags) {
-          setMeta(prev => ({
-            ...prev,
-            name: sharedName || prev.name,
-            difficulty: sharedDifficulty || prev.difficulty,
-            damage: sharedDamage || prev.damage,
-            tags: sharedTags || prev.tags
-          }));
         }
       }
     }
@@ -141,19 +112,8 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
       characterId: meta.characterId || undefined
     };
 
-    // Remove undefined values to minimize payload
-    const cleanData = Object.fromEntries(
-      Object.entries(comboData).filter(([, value]) => value !== undefined)
-    );
-
-    // Compress the data using base64 encoding
-    const jsonString = JSON.stringify(cleanData);
-    const encodedData = btoa(unescape(encodeURIComponent(jsonString)));
-
-    const shareUrl = new URL(window.location.origin);
-    shareUrl.searchParams.set('c', encodedData);
-
-    navigator.clipboard.writeText(shareUrl.toString());
+    const shareUrl = generateShareUrl(comboData);
+    navigator.clipboard.writeText(shareUrl);
     showToast("Share link copied to clipboard!", "success");
   }
 
