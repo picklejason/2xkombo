@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { useToast } from "@/lib/ToastContext";
 import { convertToNotation, parseNotation } from "@/lib/notation";
 import { Combo } from "@/lib/types";
+import { validateComboInputs, validateUserComboLimit } from "@/lib/comboLimits";
 
 const directionalInputs: InputKey[] = ["7","8","9","4","5","6","1","2","3"];
 const row1Inputs: InputKey[] = ["L","M","H","tag","air"];
@@ -217,6 +218,37 @@ export default function ComboBuilder({ characterId, editingCombo, onSave }: Prop
         showToast("Please add some inputs to the combo", "error");
         setSaving(false);
         return;
+      }
+
+      // Validate combo inputs
+      const inputValidation = validateComboInputs(inputs);
+      if (!inputValidation.isValid) {
+        showToast(inputValidation.error!, "error");
+        setSaving(false);
+        return;
+      }
+
+      // For new combos, check user's combo limit
+      if (!editingCombo) {
+        // Count user's existing combos
+        const { count, error: countError } = await supabase
+          .from("combos")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", user.id);
+
+        if (countError) {
+          console.error("Error counting user combos:", countError);
+          showToast("Error checking combo limit", "error");
+          setSaving(false);
+          return;
+        }
+
+        const userComboLimitValidation = validateUserComboLimit(count || 0);
+        if (!userComboLimitValidation.isValid) {
+          showToast(userComboLimitValidation.error!, "error");
+          setSaving(false);
+          return;
+        }
       }
 
       console.log("Saving combo with user:", user.id);
